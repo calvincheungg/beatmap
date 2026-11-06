@@ -65,6 +65,16 @@ npm run data:geocode
 
 This uses OpenStreetMap's Nominatim service and only touches rows missing coordinates. Rows with no coordinates or neighbourhood stay off the map. A neighbourhood not already in [src/data/neighbourhoods.json](src/data/neighbourhoods.json) is added to search automatically.
 
+### Events
+
+Upcoming events come from Ticketmaster's Discovery API. Get a free key at <https://developer.ticketmaster.com>, add it to `.env` as `TICKETMASTER_API_KEY`, then run:
+
+```bash
+npm run data:events
+```
+
+This writes `public/data/events.json`, which isn't committed, and reports which venues have events. The key is only used by this script and never reaches the browser.
+
 ### Building heights
 
 Heights come from the tiles, which convert `building:levels` to `levels × 3 + 2` metres and drop the raw level count. Buildings with no height information get 7 m (2 levels at 3.5 m). Getting exactly 3.5 m per level would require building custom tiles.

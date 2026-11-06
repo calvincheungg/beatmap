@@ -21,6 +21,7 @@ npm test                         # unit tests (Vitest)
 npm run data:fetch               # regenerate public/data/gta.pmtiles (needs pmtiles CLI)
 npm run data:fetch -- downtown   # downtown extract only
 npm run data:geocode             # fill in lat/lon for new venues in the CSV
+npm run data:events              # fetch Ticketmaster events (needs TICKETMASTER_API_KEY in .env)
 ```
 
 ## Architecture
@@ -36,6 +37,7 @@ npm run data:geocode             # fill in lat/lon for new venues in the CSV
 | `src/state/mapStore.ts` | Zustand store: view options, selection, fly requests, load state |
 | `src/data/toronto_music_venues.csv` | The only venue list. The app reads it directly |
 | `src/data/` | Venue and neighbourhood loaders; `neighbourhoods.json` is the base search list |
+| `src/data/ticketmaster.ts` | Ticketmaster fetching and venue matching, used by `scripts/fetch-events.ts` |
 | `src/theme.ts` | All colours, fonts and sizes |
 | `src/config.ts` | Map boundary, starting point, data URL |
 | `tests/` | Unit tests |

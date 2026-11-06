@@ -11,7 +11,8 @@
     "lint": "eslint .",
     "test": "vitest run",
     "data:fetch": "bash scripts/fetch-data.sh",
-    "data:geocode": "node scripts/geocode-venues.ts"
+    "data:geocode": "node scripts/geocode-venues.ts",
+    "data:events": "node --env-file-if-exists=.env scripts/fetch-events.ts"
   },
   "dependencies": {
     "maplibre-gl": "^6.16.0",

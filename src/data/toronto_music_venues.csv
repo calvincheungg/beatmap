@@ -13,12 +13,11 @@ Massey Hall,"178 Victoria St, Toronto, ON",https://www.masseyhall.com/,Downtown,
 Roy Thomson Hall,"60 Simcoe St, Toronto, ON",https://www.roythomsonhall.com/,Entertainment District,2600,large,indoor,listed,Wikipedia list,43.646559,-79.386339
 History,"1663 Queen St E, Toronto, ON",https://www.historytoronto.com/,The Beaches,2600,large,indoor,listed,Wikipedia list,43.666703,-79.313306
 Rebel,"11 Polson St, Toronto, ON",https://rebeltoronto.com/,Port Lands,2500,large,indoor,verify_address,Wikipedia list (no address given); nightclub/concert venue,43.640080,-79.354445
-Elgin Theatre,"189 Yonge St, Toronto, ON",https://www.heritagetrust.on.ca/properties/ewg,Downtown,2100,large,indoor,verify_address,Wikipedia list (no address given),43.653031,-79.379291
+Elgin & Winter Garden Theatres,"189 Yonge St, Toronto, ON",https://www.heritagetrust.on.ca/properties/ewg,Downtown,,large,indoor,verify_address,"Wikipedia list (no address given); two stacked theatres (Elgin about 2100, Winter Garden about 1410), which Ticketmaster lists as one venue",43.653031,-79.379291
 Four Seasons Centre,"145 Queen St W, Toronto, ON",https://www.coc.ca/,Downtown,2000,large,indoor,verify_address,Wikipedia list (no address given); opera and ballet,43.650598,-79.385527
 Harbourfront Centre Concert Stage,"235 Queens Quay W, Toronto, ON",https://harbourfrontcentre.com/,Harbourfront,2000,large,outdoor,listed,Wikipedia list; seasonal,43.639392,-79.382026
 Convocation Hall,"31 King's College Circle, Toronto, ON",https://campusevents.utoronto.ca/convocation-hall,University of Toronto,1700,large,indoor,listed,Wikipedia list,43.660772,-79.395433
 Meridian Arts Centre,"5040 Yonge St, Toronto, ON",https://www.tolive.com/Meridian-Arts-Centre,North York,1700,large,indoor,listed,Wikipedia list,43.766017,-79.414452
-Winter Garden Theatre,"189 Yonge St, Toronto, ON",https://www.heritagetrust.on.ca/properties/ewg,Downtown,1410,large,indoor,verify_address,Wikipedia list (no address given); above the Elgin Theatre,43.653031,-79.379291
 Danforth Music Hall,"147 Danforth Ave, Toronto, ON",https://www.thedanforth.com/,Riverdale,1400,large,indoor,listed,Wikipedia list,43.676200,-79.357020
 Phoenix Concert Theatre,"410 Sherbourne St, Toronto, ON",https://thephoenixconcerttheatre.com/,Cabbagetown / St. James Town,1350,large,indoor,relocating,Operating at 410 Sherbourne through 2026; new home announced Sept 2026 - check current location,43.664715,-79.374155
 Queen Elizabeth Theatre,"190 Princes' Blvd, Toronto, ON",https://www.queenelizabeththeatre.ca/,Exhibition Place,1250,large,indoor,verify_address,Wikipedia list (no address given),43.632730,-79.421380
@@ -59,7 +58,14 @@ Grossman's Tavern,"379 Spadina Ave, Toronto, ON",https://grossmanstavern.com/,Ke
 Gladstone House,"1214 Queen St W, Toronto, ON",https://www.gladstonehouse.ca/,West Queen West,,small,indoor,verify,Mentioned in live music guides; address from memory,43.642768,-79.426925
 Paradise Theatre,"1006 Bloor St W, Toronto, ON",https://paradiseonbloor.com/,Bloorcourt,,small,indoor,verify,Hosts some concerts; address from memory,43.661137,-79.430695
 The Piston,"937 Bloor St W, Toronto, ON",https://www.thepiston.ca/,Bloorcourt,,small,indoor,verify,Listed in an older live music guide - check it is still open,43.661417,-79.427613
-Smiling Buddha,"961 College St, Toronto, ON",,Little Italy,,small,indoor,verify,Listed in an older live music guide - check it is still open,43.653290,-79.426990
-Sauce on Danforth,"1376 Danforth Ave, Toronto, ON",,Danforth East,,small,indoor,verify,Hosted shows in 2025; address from memory,43.682580,-79.328270
-My House,,,,,small,indoor,verify_address,Named in a July 2026 City of Toronto report as a new grassroots venue - address unknown,,
-Junction City Music Hall,"2907 Dundas St W, Toronto, ON",,The Junction,,small,indoor,verify,From the original mock venue list; address from memory,43.665296,-79.466283
+Sauce on Danforth,"1376 Danforth Ave, Toronto, ON",https://sauceonthedanforth.com/,Danforth East,,small,indoor,verify,Hosted shows in 2025; address from memory,43.682580,-79.328270
+My House,"2882 Dundas St W, Toronto, ON",https://www.myhouseinthejunction.com/,The Junction,,small,indoor,verify_address,Named in a July 2026 City of Toronto report as a new grassroots venue - address unknown,43.665531,-79.465595
+Junction City Music Hall,"2907 Dundas St W, Toronto, ON",https://junctionunderground.ca/,The Junction,,small,indoor,verify,From the original mock venue list; address from memory,43.665296,-79.466283
+Living Arts Centre,"4141 Living Arts Dr, Mississauga, ON",,Mississauga,,large,indoor,verify,Ticketmaster venue listing; capacity not checked,43.589621,-79.645649
+Rockpile Rock Bar,"5555A Dundas St W, Toronto, ON",,Etobicoke,,small,indoor,verify,Ticketmaster venue listing; capacity not checked,43.629420,-79.548931
+CODA,"794 Bathurst St, Toronto, ON",https://codatoronto.com/,The Annex,,small,indoor,verify,Ticketmaster venue listing; capacity not checked,43.665365,-79.411490
+Spot 1 Grill & Music Hall,"289 Rutherford Rd S, Brampton, ON",,Brampton,,small,indoor,verify,Ticketmaster venue listing; capacity not checked,43.686222,-79.725376
+The Arena at Pickering Casino Resort,"888 Durham Live Ave, Pickering, ON",https://greatcanadian.com/destinations/ontario/pickering/,Pickering,,large,indoor,verify,Ticketmaster venue listing; capacity not checked,43.843320,-79.054000
+Meadowvale Theatre,"6315 Montevideo Rd, Mississauga, ON",,Mississauga,,small,indoor,verify,Ticketmaster venue listing; capacity not checked,43.585385,-79.747079
+Hard Luck Bar,"772A Dundas St W, Toronto, ON",https://www.hardluckbar.ca/,Alexandra Park,,small,indoor,verify,Ticketmaster venue listing; capacity not checked,43.652111,-79.407537
+Jane Mallett Theatre,"27 Front St E, Toronto, ON",,St. Lawrence,,small,indoor,verify,Ticketmaster venue listing; capacity not checked,43.647038,-79.375459
