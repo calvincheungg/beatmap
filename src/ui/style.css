@@ -19,6 +19,23 @@ body {
   overflow: hidden;
 }
 
+#map-root canvas.over-pin {
+  cursor: pointer;
+}
+
+.pin-label {
+  transform: translateY(var(--pin-label-offset));
+  padding: 0 var(--spacing);
+  border: var(--border-width) solid var(--color-border);
+  background: var(--color-panel);
+  color: var(--color-text);
+  font-family: var(--font-label);
+  font-size: var(--font-size-small);
+  text-transform: uppercase;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
 #map-labels {
   position: fixed;
   inset: 0;
@@ -179,27 +196,6 @@ body {
   outline-offset: calc(var(--border-width) * -1);
 }
 
-/* On phones the panel becomes a bottom sheet above the attribution, and the controls move up top. */
-@media (max-width: 640px) {
-  #side-panel {
-    top: auto;
-    bottom: var(--controls-bottom);
-    left: 0;
-    width: 100%;
-    max-width: 100%;
-    max-height: 50%;
-  }
-
-  #side-panel-edge {
-    display: none;
-  }
-
-  #map-controls {
-    top: calc(var(--gutter) * 2 + var(--control-size));
-    bottom: auto;
-  }
-}
-
 @media (prefers-reduced-motion: reduce) {
   #side-panel {
     animation: none;
@@ -280,4 +276,25 @@ body {
 
 #attribution a {
   color: inherit;
+}
+
+/* On phones the panel becomes a bottom sheet above the attribution, and the controls move up top. */
+@media (max-width: 640px) {
+  #side-panel {
+    top: auto;
+    bottom: var(--controls-bottom);
+    left: 0;
+    width: 100%;
+    max-width: 100%;
+    max-height: 50%;
+  }
+
+  #side-panel-edge {
+    display: none;
+  }
+
+  #map-controls {
+    top: calc(var(--gutter) * 2 + var(--control-size));
+    bottom: auto;
+  }
 }

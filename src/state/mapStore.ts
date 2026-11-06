@@ -21,6 +21,7 @@ interface MapState {
   /** The neighbourhood shown in the side panel. The panel is closed when null. */
   selectedNeighbourhoodId: string | null;
   selectedVenueId: string | null;
+  hoveredVenueId: string | null;
   /** Null until the first tile finishes. */
   progress: LoadProgress | null;
   /** True once the first view has fully loaded. Later tile loads stay quiet. */
@@ -29,7 +30,9 @@ interface MapState {
   toggleFlat: () => void;
   toggleLabels: () => void;
   selectNeighbourhood: (neighbourhood: Neighbourhood) => void;
-  selectVenue: (venue: Venue) => void;
+  /** Opens the panel on a venue. Flying is optional, because a clicked pin is already in view. */
+  selectVenue: (venue: Venue, options?: { fly: boolean }) => void;
+  setHoveredVenue: (id: string | null) => void;
   closePanel: () => void;
   setProgress: (progress: LoadProgress) => void;
 }
@@ -41,6 +44,7 @@ export const useMapStore = create<MapState>()((set) => ({
   flyRequest: null,
   selectedNeighbourhoodId: null,
   selectedVenueId: null,
+  hoveredVenueId: null,
   progress: null,
   initialLoadDone: false,
   rotate: (steps) => set((state) => ({ rotationSteps: state.rotationSteps + steps })),
@@ -48,8 +52,13 @@ export const useMapStore = create<MapState>()((set) => ({
   toggleLabels: () => set((state) => ({ showLabels: !state.showLabels })),
   selectNeighbourhood: ({ id, lat, lon, viewHeight }) =>
     set({ selectedNeighbourhoodId: id, selectedVenueId: null, flyRequest: { lat, lon, viewHeight } }),
-  selectVenue: ({ id, lat, lon }) =>
-    set({ selectedVenueId: id, flyRequest: { lat, lon, viewHeight: theme.camera.venueViewHeight } }),
+  selectVenue: ({ id, lat, lon, neighbourhood }, { fly } = { fly: true }) =>
+    set((state) => ({
+      selectedVenueId: id,
+      selectedNeighbourhoodId: neighbourhood,
+      flyRequest: fly ? { lat, lon, viewHeight: theme.camera.venueViewHeight } : state.flyRequest,
+    })),
+  setHoveredVenue: (id) => set({ hoveredVenueId: id }),
   closePanel: () => set({ selectedNeighbourhoodId: null, selectedVenueId: null }),
   setProgress: (progress) =>
     set((state) => ({

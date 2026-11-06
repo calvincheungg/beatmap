@@ -2,7 +2,7 @@
 
 A stylized isometric 3D map of Toronto, built with React, Three.js (React Three Fiber) and TypeScript, for showing live music events.
 
-**Status: Milestone 2.** The GTA, covering Mississauga, Brampton, Vaughan, Markham, Pickering and Toronto, with level of detail, tiles that load as you move, place names, isometric and flat views, neighbourhood search and a side panel. Venue pins and touch pinch zoom come next.
+**Status: Milestone 2.** The GTA, covering Mississauga, Brampton, Vaughan, Markham, Pickering and Toronto, with level of detail, tiles that load as you move, place names, isometric and flat views, neighbourhood search, a side panel, venue pins and touch controls.
 
 ## Run it
 
@@ -31,7 +31,7 @@ This is for local development only: it loads more slowly, the build eventually g
 | `npm test` | Run the unit tests |
 | `npm run build` | Type check and build for production |
 
-**Controls:** drag to pan, scroll or trackpad-pinch to zoom, Q/E or the on-screen buttons to rotate, F or the FLAT/ISO button to switch views, L or the NAMES button to show or hide place names. Add `?stats` to the URL in development for a frame time overlay.
+**Controls:** drag to pan, scroll or pinch to zoom, hover or click a pin to see a venue, Q/E or the on-screen buttons to rotate, F or the FLAT/ISO button to switch views, L or the NAMES button to show or hide place names. Add `?stats` to the URL in development for a frame time overlay.
 
 ## Map data
 

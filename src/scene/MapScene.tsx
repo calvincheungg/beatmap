@@ -7,6 +7,7 @@ import { theme } from '../theme';
 import { CameraRig } from './CameraRig';
 import { IsoCamera } from './camera/isoCamera';
 import { MapTiles } from './MapTiles';
+import { VenuePins } from './VenuePins';
 
 /** `?stats` in the URL shows a frame time overlay during development. */
 const showStats = import.meta.env.DEV && new URLSearchParams(location.search).has('stats');
@@ -31,6 +32,7 @@ export function MapScene({ labelCanvas }: { labelCanvas: HTMLCanvasElement | nul
         <>
           <CameraRig view={view} />
           {labelCanvas && <MapTiles view={view} labelCanvas={labelCanvas} />}
+          <VenuePins view={view} />
         </>
       )}
       {showStats && <Stats />}

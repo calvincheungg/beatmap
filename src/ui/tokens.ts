@@ -12,6 +12,8 @@ export function applyThemeTokens(root: HTMLElement = document.documentElement): 
   }
   root.style.setProperty('--font-family', ui.fontFamily);
   root.style.setProperty('--font-display', ui.displayFontFamily);
+  root.style.setProperty('--font-label', ui.labelFontFamily);
+  root.style.setProperty('--pin-label-offset', ui.pinLabelOffset);
   root.style.setProperty('--headline-size', ui.headlineSize);
   root.style.setProperty('--panel-width', ui.panelWidth);
   root.style.setProperty('--edge-size', ui.edgeSize);

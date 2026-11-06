@@ -52,6 +52,8 @@ export const theme = {
     headlineSize: '40px',
     panelWidth: '340px',
     edgeSize: '8px',
+    labelFontFamily: "'Archivo Black', 'Space Mono', sans-serif",
+    pinLabelOffset: '-46px',
     motionDuration: '200ms',
     fontSize: '15px',
     smallFontSize: '12px',
@@ -152,6 +154,18 @@ export const theme = {
     /** Clear space kept around each label, in CSS pixels. */
     padding: 6,
     maxPerFrame: 60,
+  },
+
+  /** Venue push-pins. They stay the same size on screen at every zoom. */
+  pins: {
+    heightPixels: 34,
+    hoverScale: 1.3,
+    color: palette.paper,
+    hoverColor: palette.risoYellow,
+    selectedColor: palette.risoRed,
+    outlineColor: palette.ink,
+    /** Pins draw after everything on the map, so buildings never hide them. */
+    renderOrder: 10,
   },
 
   /** Fog starts and ends at these fractions of the view height above screen centre. */

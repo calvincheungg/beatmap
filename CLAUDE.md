@@ -2,7 +2,7 @@
 
 ## Overview
 A web app showing Toronto/GTA live music events on a stylized isometric 3D map.
-Current phase: map only, with mock venue pins (pins not built yet). Milestones 1 and 2 are done; search and the side panel from Milestone 3 are in. Pins and touch pinch zoom remain.
+Current phase: map only, with mock venue pins (pins not built yet). Milestones 1 to 3 are done.
 
 ## Stack
 - Vite, React, TypeScript (strict), Three.js via React Three Fiber + drei, Zustand, Vitest.
@@ -32,7 +32,7 @@ npm run data:fetch -- downtown   # downtown extract only
 | `src/map/layers/` | Tile features to merged geometry, per layer |
 | `src/map/tiles/` | Tile loading: web workers, `visibleTiles.ts`, `tileManager.ts` (mesh lifecycle, LRU cache) |
 | `src/map/materials.ts` | Shared materials |
-| `src/scene/` | React Three Fiber components: canvas, camera rig, tiles, lights |
+| `src/scene/` | React Three Fiber components: canvas, camera rig, tiles, lights, venue pins |
 | `src/scene/camera/` | Camera state and input controls (plain TS) |
 | `src/ui/` | HTML interface, `tokens.ts` (theme to CSS variables), `style.css` |
 | `src/state/mapStore.ts` | Zustand store: view options, selection, fly requests, load progress |

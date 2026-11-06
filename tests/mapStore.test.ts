@@ -10,6 +10,7 @@ describe('mapStore', () => {
       flyRequest: null,
       selectedNeighbourhoodId: null,
       selectedVenueId: null,
+      hoveredVenueId: null,
       progress: null,
       initialLoadDone: false,
     }),
@@ -52,6 +53,21 @@ describe('mapStore', () => {
     expect(state.flyRequest).toEqual({ lat: 43.7, lon: -79.4, viewHeight: 2000 });
     state.closePanel();
     expect(useMapStore.getState().selectedNeighbourhoodId).toBeNull();
+  });
+
+  it('opens the panel on a clicked pin without moving the camera', () => {
+    const venue = { id: 'v', name: 'V', lat: 43.7, lon: -79.4, neighbourhood: 'area' };
+    useMapStore.getState().selectVenue(venue, { fly: false });
+    const state = useMapStore.getState();
+    expect(state.selectedVenueId).toBe('v');
+    expect(state.selectedNeighbourhoodId).toBe('area');
+    expect(state.flyRequest).toBeNull();
+  });
+
+  it('flies to a venue picked in the panel', () => {
+    const venue = { id: 'v', name: 'V', lat: 43.7, lon: -79.4, neighbourhood: 'area' };
+    useMapStore.getState().selectVenue(venue);
+    expect(useMapStore.getState().flyRequest).toMatchObject({ lat: 43.7, lon: -79.4 });
   });
 
   it('stores load progress', () => {

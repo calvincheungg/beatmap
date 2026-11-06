@@ -1,10 +1,11 @@
+import { pinchStep, type Point } from './gestures';
 import type { IsoCamera } from './isoCamera';
 
 const WHEEL_ZOOM_SPEED = 0.0015;
 /** Trackpad pinches report small wheel deltas, so they get a stronger response. */
 const PINCH_ZOOM_SPEED = 0.01;
 
-/** Drag to pan, scroll to zoom, Q and E to rotate, F for the flat map, L for place names. Returns a function that removes the listeners. */
+/** Drag to pan, pinch or scroll to zoom, Q and E to rotate, F for the flat map, L for place names. Returns a function that removes the listeners. */
 export function attachControls(
   canvas: HTMLElement,
   view: IsoCamera,
@@ -15,14 +16,18 @@ export function attachControls(
 ): () => void {
   const abort = new AbortController();
   const { signal } = abort;
-  let dragging: { pointerId: number; x: number; y: number } | undefined;
+  const pointers = new Map<number, Point>();
+
+  const toNdc = ({ x, y }: Point) => {
+    const rect = canvas.getBoundingClientRect();
+    return { x: ((x - rect.left) / rect.width) * 2 - 1, y: -(((y - rect.top) / rect.height) * 2 - 1) };
+  };
 
   canvas.addEventListener(
     'pointerdown',
     (event) => {
-      if (dragging) return;
       canvas.setPointerCapture(event.pointerId);
-      dragging = { pointerId: event.pointerId, x: event.clientX, y: event.clientY };
+      pointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
       canvas.classList.add('dragging');
     },
     { signal },
@@ -31,19 +36,29 @@ export function attachControls(
   canvas.addEventListener(
     'pointermove',
     (event) => {
-      if (!dragging || event.pointerId !== dragging.pointerId) return;
-      view.panByPixels(event.clientX - dragging.x, event.clientY - dragging.y, canvas.clientHeight);
-      dragging.x = event.clientX;
-      dragging.y = event.clientY;
+      const previous = pointers.get(event.pointerId);
+      if (!previous) return;
+      const current = { x: event.clientX, y: event.clientY };
+
+      if (pointers.size === 1) {
+        view.panByPixels(current.x - previous.x, current.y - previous.y, canvas.clientHeight);
+      } else {
+        // The other finger hasn't moved in this event, so each event is one step of the gesture.
+        const other = [...pointers.entries()].find(([id]) => id !== event.pointerId)![1];
+        const step = pinchStep(previous, other, current, other);
+        view.panByPixels(step.panX, step.panY, canvas.clientHeight);
+        const middle = toNdc(step.middle);
+        view.zoomAt(step.zoomFactor, middle.x, middle.y);
+      }
+      pointers.set(event.pointerId, current);
       onInput();
     },
     { signal },
   );
 
   const endDrag = (event: PointerEvent) => {
-    if (dragging?.pointerId !== event.pointerId) return;
-    dragging = undefined;
-    canvas.classList.remove('dragging');
+    pointers.delete(event.pointerId);
+    if (pointers.size === 0) canvas.classList.remove('dragging');
   };
   canvas.addEventListener('pointerup', endDrag, { signal });
   canvas.addEventListener('pointercancel', endDrag, { signal });
@@ -53,10 +68,8 @@ export function attachControls(
     (event) => {
       event.preventDefault();
       const speed = event.ctrlKey ? PINCH_ZOOM_SPEED : WHEEL_ZOOM_SPEED;
-      const rect = canvas.getBoundingClientRect();
-      const ndcX = ((event.clientX - rect.left) / rect.width) * 2 - 1;
-      const ndcY = -(((event.clientY - rect.top) / rect.height) * 2 - 1);
-      view.zoomAt(Math.exp(event.deltaY * speed), ndcX, ndcY);
+      const cursor = toNdc({ x: event.clientX, y: event.clientY });
+      view.zoomAt(Math.exp(event.deltaY * speed), cursor.x, cursor.y);
       onInput();
     },
     { signal, passive: false },

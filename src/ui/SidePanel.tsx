@@ -12,6 +12,7 @@ export function SidePanel() {
   const area = findNeighbourhood(selectedId);
   if (!area) return null;
   const areaVenues = venuesIn(area.id);
+  const venue = areaVenues.find(({ id }) => id === selectedVenueId);
 
   return (
     <>
@@ -20,19 +21,20 @@ export function SidePanel() {
         <button id="panel-close" type="button" aria-label="Close panel" onClick={closePanel}>
           ×
         </button>
-        <h2>{area.name}</h2>
+        <h2>{venue?.name ?? area.name}</h2>
+        {venue && <p>{area.name}</p>}
         {areaVenues.length === 0 ? (
           <p>Nothing listed here yet.</p>
         ) : (
           <ul>
-            {areaVenues.map((venue) => (
-              <li key={venue.id}>
+            {areaVenues.map((listed) => (
+              <li key={listed.id}>
                 <button
                   type="button"
-                  aria-current={venue.id === selectedVenueId}
-                  onClick={() => selectVenue(venue)}
+                  aria-current={listed.id === selectedVenueId}
+                  onClick={() => selectVenue(listed)}
                 >
-                  {venue.name}
+                  {listed.name}
                 </button>
               </li>
             ))}
