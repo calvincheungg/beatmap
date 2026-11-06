@@ -30,6 +30,14 @@ export function SidePanel() {
               {venue.capacity ? ` · about ${venue.capacity.toLocaleString()} capacity` : ''}
             </p>
             {venue.status !== 'listed' && <p>Details not yet confirmed.</p>}
+            {venue.website && (
+              <p>
+                <a className="venue-link" href={venue.website} target="_blank" rel="noopener noreferrer">
+                  Visit website
+                  <span className="visually-hidden"> (opens in a new tab)</span>
+                </a>
+              </p>
+            )}
           </>
         )}
         {areaVenues.length === 0 ? (

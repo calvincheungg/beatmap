@@ -7,6 +7,8 @@ export interface Venue {
   lat: number;
   lon: number;
   address: string;
+  /** The venue's own site. Null when it has none or the CSV value isn't a web address. */
+  website: string | null;
   /** The id of the venue's neighbourhood. */
   neighbourhood: string;
   neighbourhoodName: string;
@@ -27,6 +29,12 @@ export function slugify(name: string): string {
     .replace(/^-|-$/g, '');
 }
 
+/** Only allows http and https, so a bad CSV value can never become a harmful link. */
+export function safeWebsite(value: string | undefined): string | null {
+  const trimmed = (value ?? '').trim();
+  return /^https?:\/\/\S+$/i.test(trimmed) ? trimmed : null;
+}
+
 /** Reads venues from CSV text. Rows without coordinates or a neighbourhood can't go on the map, so they're skipped. */
 export function parseVenues(text: string): Venue[] {
   return parseCsv(text).flatMap((row): Venue[] => {
@@ -44,6 +52,7 @@ export function parseVenues(text: string): Venue[] {
         lat,
         lon,
         address: (row.address ?? '').trim(),
+        website: safeWebsite(row.website),
         neighbourhood: slugify(neighbourhoodName),
         neighbourhoodName,
         capacity: Number.isFinite(capacity) ? capacity : null,

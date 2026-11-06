@@ -57,7 +57,7 @@ To use another tile source, change the source in [src/map/mapStyle.ts](src/map/m
 
 ### Venues
 
-Venues live in one file, [src/data/toronto_music_venues.csv](src/data/toronto_music_venues.csv), which you can edit in any spreadsheet. To add one, add a row without `lat` and `lon`, then fill them in from the address:
+Venues live in one file, [src/data/toronto_music_venues.csv](src/data/toronto_music_venues.csv), which you can edit in any spreadsheet. The optional `website` column adds a link in the side panel and must start with `http://` or `https://`. To add a venue, add a row without `lat` and `lon`, then fill them in from the address:
 
 ```bash
 npm run data:geocode

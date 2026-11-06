@@ -163,6 +163,34 @@ body {
   font-weight: 700;
 }
 
+.venue-link {
+  display: inline-block;
+  padding: var(--spacing);
+  border: var(--border-width) solid var(--color-border);
+  color: var(--color-text);
+  font-weight: 700;
+  box-shadow: var(--shadow-offset) var(--shadow-offset) 0 var(--color-accent);
+}
+
+.venue-link:active {
+  transform: translate(var(--shadow-offset), var(--shadow-offset));
+  box-shadow: none;
+}
+
+.venue-link:focus-visible {
+  outline: var(--border-width) solid var(--color-accent);
+  outline-offset: var(--border-width);
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
 #panel-close {
   position: absolute;
   top: var(--spacing);

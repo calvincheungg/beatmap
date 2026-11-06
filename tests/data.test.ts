@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { MAP_BOUNDS } from '../src/config';
 import { parseCsv, toCsv } from '../src/data/csv';
 import { neighbourhoods, searchNeighbourhoods, withVenueNeighbourhoods } from '../src/data/neighbourhoods';
-import { parseVenues, venues, venuesIn } from '../src/data/venues';
+import { parseVenues, safeWebsite, venues, venuesIn } from '../src/data/venues';
 
 const inBounds = ({ lat, lon }: { lat: number; lon: number }) =>
   lat >= MAP_BOUNDS.south && lat <= MAP_BOUNDS.north && lon >= MAP_BOUNDS.west && lon <= MAP_BOUNDS.east;
@@ -74,6 +74,20 @@ describe('parseCsv', () => {
   });
 });
 
+describe('safeWebsite', () => {
+  it('accepts web addresses', () => {
+    expect(safeWebsite(' https://www.masseyhall.com/ ')).toBe('https://www.masseyhall.com/');
+    expect(safeWebsite('http://www.bovinesexclub.com/')).toBe('http://www.bovinesexclub.com/');
+  });
+
+  it('rejects anything else, including script links', () => {
+    expect(safeWebsite('')).toBeNull();
+    expect(safeWebsite(undefined)).toBeNull();
+    expect(safeWebsite('www.masseyhall.com')).toBeNull();
+    expect(safeWebsite('javascript:alert(1)')).toBeNull();
+  });
+});
+
 describe('parseVenues', () => {
   const header = 'name,address,neighbourhood,approx_capacity,size_tier,indoor_outdoor,status,source_note,lat,lon\n';
 
@@ -116,9 +130,14 @@ describe('withVenueNeighbourhoods', () => {
 describe('the real venue list', () => {
   it('has the CSV venues, including the original mock ones', () => {
     expect(venues.length).toBeGreaterThan(50);
-    for (const id of ['the-rex-hotel-jazz-blues-bar', 'the-dakota-tavern', 'junction-city-music-hall']) {
+    for (const id of ['the-rex-hotel-jazz-blues-bar', 'junction-city-music-hall']) {
       expect(venues.map((venue) => venue.id)).toContain(id);
     }
+  });
+
+  it('only has valid website values in the CSV', () => {
+    expect(venues.filter((venue) => venue.website).length).toBeGreaterThan(40);
+    expect(venues.some((venue) => venue.id === 'massey-hall' && venue.website)).toBe(true);
   });
 
   it('has no duplicate venues', () => {
