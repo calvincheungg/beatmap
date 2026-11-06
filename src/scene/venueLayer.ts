@@ -1,4 +1,5 @@
 import { Marker, type GeoJSONSource, type Map as MapLibreMap, type MapMouseEvent } from 'maplibre-gl';
+import { todayString } from '../data/events';
 import { venues } from '../data/venues';
 import { useMapStore } from '../state/mapStore';
 import { theme, toCssColor } from '../theme';
@@ -52,17 +53,24 @@ function nothingMatches(): ['==', ['get', string], string] {
 export function addVenueLayer(map: MapLibreMap): () => void {
   const { pins } = theme;
   map.addImage('pin', drawPin(pins.color), { pixelRatio: IMAGE_SCALE });
+  map.addImage('pin-quiet', drawPin(pins.quietColor), { pixelRatio: IMAGE_SCALE });
   map.addImage('pin-hover', drawPin(pins.hoverColor), { pixelRatio: IMAGE_SCALE });
   map.addImage('pin-selected', drawPin(pins.selectedColor), { pixelRatio: IMAGE_SCALE });
 
-  const data = {
-    type: 'FeatureCollection' as const,
-    features: venues.map(({ id, name, lat, lon }) => ({
-      type: 'Feature' as const,
-      properties: { id, name },
-      geometry: { type: 'Point' as const, coordinates: [lon, lat] },
-    })),
+  /** Every pin stays red until listings load, or if they can't load. */
+  const pinData = () => {
+    const { events, eventsLoaded } = useMapStore.getState();
+    const withShows = new Set((events ?? []).filter((event) => event.date >= todayString()).map((event) => event.venueId));
+    return {
+      type: 'FeatureCollection' as const,
+      features: venues.map(({ id, name, lat, lon }) => ({
+        type: 'Feature' as const,
+        properties: { id, name, quiet: eventsLoaded && events !== null && !withShows.has(id) },
+        geometry: { type: 'Point' as const, coordinates: [lon, lat] },
+      })),
+    };
   };
+  const data = pinData();
   map.addSource(SOURCE, {
     type: 'geojson',
     data,
@@ -114,7 +122,7 @@ export function addVenueLayer(map: MapLibreMap): () => void {
       type: 'symbol',
       source: id === BASE_LAYER ? SOURCE : ACTIVE_SOURCE,
       layout: {
-        'icon-image': image,
+        'icon-image': id === BASE_LAYER ? ['case', ['get', 'quiet'], 'pin-quiet', 'pin'] : image,
         'icon-size': size,
         'icon-anchor': 'bottom',
         'icon-allow-overlap': true,
@@ -193,6 +201,11 @@ export function addVenueLayer(map: MapLibreMap): () => void {
   applySelection();
 
   const stopListening = useMapStore.subscribe((state, previous) => {
+    if (state.events !== previous.events) {
+      const updated = pinData();
+      (map.getSource(SOURCE) as GeoJSONSource).setData(updated);
+      (map.getSource(ACTIVE_SOURCE) as GeoJSONSource).setData(updated);
+    }
     if (state.hoveredVenueId !== previous.hoveredVenueId || state.selectedVenueId !== previous.selectedVenueId) {
       applySelection();
     }

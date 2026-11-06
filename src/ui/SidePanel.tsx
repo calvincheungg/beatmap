@@ -1,6 +1,13 @@
+import { todayString, upcomingShows } from '../data/events';
 import { findNeighbourhood } from '../data/neighbourhoods';
 import { venuesIn } from '../data/venues';
 import { useMapStore } from '../state/mapStore';
+import { VenueShows } from './VenueShows';
+
+function ShowCount({ count }: { count: number }) {
+  if (count === 0) return null;
+  return <span className="show-count"> · {count === 1 ? '1 show' : `${count} shows`}</span>;
+}
 
 /** Shows the selected neighbourhood and its venues. Picking a venue flies the map to it. */
 export function SidePanel() {
@@ -8,7 +15,9 @@ export function SidePanel() {
   const selectedVenueId = useMapStore((state) => state.selectedVenueId);
   const selectVenue = useMapStore((state) => state.selectVenue);
   const closePanel = useMapStore((state) => state.closePanel);
+  const events = useMapStore((state) => state.events);
 
+  const today = todayString();
   const area = findNeighbourhood(selectedId);
   if (!area) return null;
   const areaVenues = venuesIn(area.id);
@@ -38,6 +47,8 @@ export function SidePanel() {
                 </a>
               </p>
             )}
+            <VenueShows key={venue.id} venueId={venue.id} />
+            <h3>More in {area.name}</h3>
           </>
         )}
         {areaVenues.length === 0 ? (
@@ -52,6 +63,7 @@ export function SidePanel() {
                   onClick={() => selectVenue(listed)}
                 >
                   {listed.name}
+                  {events && <ShowCount count={upcomingShows(events, listed.id, today).length} />}
                 </button>
               </li>
             ))}

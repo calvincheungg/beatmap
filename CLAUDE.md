@@ -38,6 +38,7 @@ npm run data:events              # fetch Ticketmaster events (needs TICKETMASTER
 | `src/data/toronto_music_venues.csv` | The only venue list. The app reads it directly |
 | `src/data/` | Venue and neighbourhood loaders; `neighbourhoods.json` is the base search list |
 | `src/data/ticketmaster.ts` | Ticketmaster fetching and venue matching, used by `scripts/fetch-events.ts` |
+| `src/data/events.ts` | Loads and formats events for the side panel |
 | `src/theme.ts` | All colours, fonts and sizes |
 | `src/config.ts` | Map boundary, starting point, data URL |
 | `tests/` | Unit tests |

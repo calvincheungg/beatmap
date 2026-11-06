@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import type { ShowEvent } from '../data/events';
 import type { Neighbourhood } from '../data/neighbourhoods';
 import type { Venue } from '../data/venues';
 import { theme } from '../theme';
@@ -24,6 +25,9 @@ interface MapState {
   selectedVenueId: string | null;
   hoveredVenueId: string | null;
   loadState: LoadState;
+  /** Upcoming shows. Empty until loaded, and null if the listings couldn't be loaded. */
+  events: ShowEvent[] | null;
+  eventsLoaded: boolean;
   rotate: (steps: number) => void;
   toggleFlat: () => void;
   toggleLabels: () => void;
@@ -33,6 +37,7 @@ interface MapState {
   setHoveredVenue: (id: string | null) => void;
   closePanel: () => void;
   setLoadState: (loadState: LoadState) => void;
+  setEvents: (events: ShowEvent[] | null) => void;
 }
 
 export const useMapStore = create<MapState>()((set) => ({
@@ -44,6 +49,8 @@ export const useMapStore = create<MapState>()((set) => ({
   selectedVenueId: null,
   hoveredVenueId: null,
   loadState: 'loading',
+  events: [],
+  eventsLoaded: false,
   rotate: (steps) => set((state) => ({ rotationSteps: state.rotationSteps + steps })),
   toggleFlat: () => set((state) => ({ flat: !state.flat })),
   toggleLabels: () => set((state) => ({ showLabels: !state.showLabels })),
@@ -58,4 +65,5 @@ export const useMapStore = create<MapState>()((set) => ({
   setHoveredVenue: (id) => set({ hoveredVenueId: id }),
   closePanel: () => set({ selectedNeighbourhoodId: null, selectedVenueId: null }),
   setLoadState: (loadState) => set({ loadState }),
+  setEvents: (events) => set({ events, eventsLoaded: true }),
 }));

@@ -76,7 +76,7 @@ Rules:
 - Land: paper or paper-dark. Water: riso-blue with a halftone dot pattern. Parks: riso-green halftone.
 - Roads: minor streets in fade, major streets in riso-yellow, highways in highway-orange and thicker. No neon.
 - Buildings: flat dark greys with darker shading on one side to read as isometric. MapLibre can't draw ink edge outlines on 3D buildings, so rely on face contrast. Avoid photoreal lighting.
-- Venue pins: push-pins or small stamped flyers standing on the map. Pins are riso-red; the selected venue uses selected-purple with a stamp-style label.
+- Venue pins: push-pins or small stamped flyers standing on the map. Pins are riso-red, or fade when a venue has no upcoming shows; the selected venue uses selected-purple with a stamp-style label.
 - Labels: currently Noto Sans Medium, the font with ready-made map glyphs; move to Archivo Black once its glyphs are generated. Paper text with an ink outline on the dark map. Street names follow the roads.
 
 ## Motion

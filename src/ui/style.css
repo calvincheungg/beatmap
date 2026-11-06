@@ -191,6 +191,57 @@ body {
   white-space: nowrap;
 }
 
+.show-list {
+  margin-bottom: var(--spacing);
+}
+
+#side-panel h3 {
+  margin: var(--gutter) 0 var(--spacing);
+  font-family: var(--font-label);
+  font-size: var(--font-size);
+  font-weight: 400;
+  text-transform: uppercase;
+}
+
+.show-list li {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  padding: var(--spacing) 0;
+  border-top: var(--border-width) solid var(--color-border);
+}
+
+.show-list a {
+  color: var(--color-text);
+  font-weight: 700;
+}
+
+.show-status {
+  padding: 0 var(--spacing);
+  background: var(--color-tape);
+  font-weight: 700;
+}
+
+.show-more {
+  width: 100%;
+  min-height: var(--control-size);
+  border: var(--border-width) solid var(--color-border);
+  background: var(--color-panel);
+  color: var(--color-text);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.show-source {
+  margin-top: var(--spacing);
+  font-size: var(--font-size-small);
+}
+
+.show-count {
+  font-weight: 700;
+}
+
 #panel-close {
   position: absolute;
   top: var(--spacing);

@@ -73,7 +73,7 @@ Upcoming events come from Ticketmaster's Discovery API. Get a free key at <https
 npm run data:events
 ```
 
-This writes `public/data/events.json`, which isn't committed, and reports which venues have events. The key is only used by this script and never reaches the browser.
+This writes `public/data/events.json`, which isn't committed, and reports which venues have events. The key is only used by this script and never reaches the browser. The app reads that file to list shows in the side panel and mark venues with upcoming shows in red. Without it, the app still runs, just without listings. Ticketmaster's terms limit how long event data can be stored, so refresh it regularly.
 
 ### Building heights
 

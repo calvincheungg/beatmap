@@ -12,6 +12,8 @@ describe('mapStore', () => {
       selectedVenueId: null,
       hoveredVenueId: null,
       loadState: 'loading',
+      events: [],
+      eventsLoaded: false,
     }),
   );
 
@@ -28,6 +30,11 @@ describe('mapStore', () => {
     expect(useMapStore.getState().flat).toBe(true);
     useMapStore.getState().toggleFlat();
     expect(useMapStore.getState().flat).toBe(false);
+  });
+
+  it('records loaded events and failed loads', () => {
+    useMapStore.getState().setEvents(null);
+    expect(useMapStore.getState()).toMatchObject({ events: null, eventsLoaded: true });
   });
 
   it('tracks whether the map has loaded', () => {

@@ -112,6 +112,8 @@ export const theme = {
     heightPixels: 34,
     activeScale: 1.3,
     color: palette.risoRed,
+    /** Venues with no upcoming shows listed, so active venues stand out. */
+    quietColor: palette.fade,
     hoverColor: palette.risoYellow,
     selectedColor: palette.selectedPurple,
     outlineColor: palette.ink,
