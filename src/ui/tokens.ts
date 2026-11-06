@@ -18,5 +18,7 @@ export function applyThemeTokens(root: HTMLElement = document.documentElement): 
   root.style.setProperty('--gutter', ui.gutter);
   root.style.setProperty('--control-size', ui.controlSize);
   root.style.setProperty('--border-width', ui.borderWidth);
+  root.style.setProperty('--shadow-offset', ui.shadowOffset);
+  root.style.setProperty('--press-duration', ui.pressDuration);
   root.style.setProperty('--controls-bottom', ui.controlsBottom);
 }

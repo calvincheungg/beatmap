@@ -44,11 +44,26 @@ body {
   color: var(--color-text);
   font-family: inherit;
   font-size: var(--icon-size);
+  box-shadow: var(--shadow-offset) var(--shadow-offset) 0 var(--color-accent);
   cursor: pointer;
+  transition: transform var(--press-duration), box-shadow var(--press-duration);
 }
 
-#rotate button:hover {
-  border-color: var(--color-text);
+#rotate button:active {
+  transform: translate(var(--shadow-offset), var(--shadow-offset));
+  box-shadow: none;
+}
+
+#rotate button:focus-visible,
+#attribution a:focus-visible {
+  outline: var(--border-width) solid var(--color-accent);
+  outline-offset: var(--border-width);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #rotate button {
+    transition: none;
+  }
 }
 
 #status {
@@ -61,8 +76,9 @@ body {
   background: var(--color-panel);
 }
 
+/* Red text on paper fails contrast, so errors keep ink text and get a red shadow. */
 #status.error {
-  color: var(--color-error);
+  box-shadow: var(--shadow-offset) var(--shadow-offset) 0 var(--color-accent);
 }
 
 #attribution {
@@ -71,7 +87,7 @@ body {
   bottom: 0;
   padding: var(--spacing);
   background: var(--color-panel);
-  color: var(--color-muted);
+  color: var(--color-text);
   font-size: var(--font-size-small);
 }
 

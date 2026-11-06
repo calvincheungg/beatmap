@@ -2,50 +2,50 @@
 
 export type LayerId = 'land' | 'water' | 'park' | 'roadsMajor' | 'roadsMinor' | 'buildings' | 'edges';
 
-/** The palette shared by the map and the UI. */
+/** The palette shared by the map and the UI. See the gig-poster-ui skill. */
 const palette = {
-  night: 0x090e1c,
-  navy: 0x18213a,
-  deepBlue: 0x0c2f63,
-  mutedGreen: 0x2b4b3c,
-  softGrey: 0x8d92a3,
-  slate: 0x596074,
-  paper: 0xe7e9f2,
-  coral: 0xffb4a8,
+  paper: 0xf2ebdd,
+  paperDark: 0x1b1a17,
+  ink: 0x141414,
+  risoRed: 0xe3412b,
+  risoBlue: 0x2f5ba8,
+  risoGreen: 0x3e8e5e,
+  fade: 0x8a8274,
 };
 
 export const theme = {
-  background: palette.night,
+  background: palette.ink,
 
   colors: {
-    land: palette.navy,
-    water: palette.deepBlue,
-    park: palette.mutedGreen,
-    roadsMajor: palette.softGrey,
-    roadsMinor: palette.slate,
+    land: palette.paperDark,
+    water: palette.risoBlue,
+    park: palette.risoGreen,
+    // Ink roads wouldn't show on dark paper, so night mode prints them in paper tones.
+    roadsMajor: palette.paper,
+    roadsMinor: palette.fade,
   },
 
   /** Applied to the page as CSS variables by src/ui/tokens.ts. */
   ui: {
     colors: {
-      page: palette.night,
-      panel: palette.navy,
-      border: palette.slate,
-      text: palette.paper,
-      muted: palette.softGrey,
-      error: palette.coral,
+      page: palette.paperDark,
+      panel: palette.paper,
+      border: palette.ink,
+      text: palette.ink,
+      accent: palette.risoRed,
     },
-    /** A placeholder until the retro fonts are chosen. */
-    fontFamily: "ui-monospace, 'SF Mono', Menlo, Consolas, monospace",
-    fontSize: '13px',
+    fontFamily: "'Space Mono', 'IBM Plex Mono', monospace",
+    fontSize: '15px',
     smallFontSize: '12px',
     iconSize: '20px',
     spacing: '8px',
     gutter: '16px',
-    controlSize: '44px',
-    borderWidth: '1px',
+    controlSize: '48px',
+    borderWidth: '3px',
+    shadowOffset: '4px',
+    pressDuration: '120ms',
     /** Keeps the rotate buttons clear of the attribution line. */
-    controlsBottom: '44px',
+    controlsBottom: '48px',
   },
 
   /** Draw order, lowest first. Reorder these values to change the layer stack. */
@@ -77,24 +77,25 @@ export const theme = {
   } as Record<string, number>,
 
   buildings: {
-    /** Warm, low-saturation tones. A building's colour is chosen from its height. */
-    palette: [0x9c8a80, 0x8a7a76, 0xa8958a, 0x7f7472, 0x94857f, 0xa08c7a, 0x8c8079],
+    /** Faded paper tones. A building's colour is chosen from its height. */
+    palette: [0xdcd4c4, 0xd2c9b7, 0xc8bfad, 0xd7cebc, 0xcdc4b2, 0xc3baa8, 0xd0c8b8],
     /** Roofs are multiplied by this so they read apart from the walls. */
-    roofTint: 0.9,
+    roofTint: 1,
     /** Used when a building has no height. Tagged levels are already converted by the tiles. */
     metresPerLevel: 3.5,
     defaultLevels: 2,
-    edgeColor: 0x241f2b,
-    edgeOpacity: 0.45,
+    edgeColor: palette.ink,
+    edgeOpacity: 0.9,
     /** Edge lines are hidden above this view height (metres) to avoid shimmer. */
     edgeMaxViewHeight: 4500,
   },
 
   light: {
-    ambientColor: 0x8f9bc4,
-    ambientIntensity: 1.15,
-    directionalColor: 0xffe6c8,
-    directionalIntensity: 1.5,
+    // Neutral light that leaves roofs near full paper colour and darkens one side of each building.
+    ambientColor: 0xffffff,
+    ambientIntensity: 1.6,
+    directionalColor: 0xffffff,
+    directionalIntensity: 2,
     direction: [-0.55, 0.8, 0.35] as const,
   },
 
