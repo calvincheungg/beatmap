@@ -1,15 +1,16 @@
 import { create } from 'zustand';
 import type { Neighbourhood } from '../data/neighbourhoods';
 import type { Venue } from '../data/venues';
-import type { LoadProgress } from '../map/tiles/tileManager';
 import { theme } from '../theme';
 
 /** Where the camera should fly. A new object starts a new flight. */
 export interface FlyRequest {
   lat: number;
   lon: number;
-  viewHeight: number;
+  zoom: number;
 }
+
+export type LoadState = 'loading' | 'ready' | 'error';
 
 interface MapState {
   /** Total 90 degree rotation steps from the default view. */
@@ -22,10 +23,7 @@ interface MapState {
   selectedNeighbourhoodId: string | null;
   selectedVenueId: string | null;
   hoveredVenueId: string | null;
-  /** Null until the first tile finishes. */
-  progress: LoadProgress | null;
-  /** True once the first view has fully loaded. Later tile loads stay quiet. */
-  initialLoadDone: boolean;
+  loadState: LoadState;
   rotate: (steps: number) => void;
   toggleFlat: () => void;
   toggleLabels: () => void;
@@ -34,7 +32,7 @@ interface MapState {
   selectVenue: (venue: Venue, options?: { fly: boolean }) => void;
   setHoveredVenue: (id: string | null) => void;
   closePanel: () => void;
-  setProgress: (progress: LoadProgress) => void;
+  setLoadState: (loadState: LoadState) => void;
 }
 
 export const useMapStore = create<MapState>()((set) => ({
@@ -45,25 +43,19 @@ export const useMapStore = create<MapState>()((set) => ({
   selectedNeighbourhoodId: null,
   selectedVenueId: null,
   hoveredVenueId: null,
-  progress: null,
-  initialLoadDone: false,
+  loadState: 'loading',
   rotate: (steps) => set((state) => ({ rotationSteps: state.rotationSteps + steps })),
   toggleFlat: () => set((state) => ({ flat: !state.flat })),
   toggleLabels: () => set((state) => ({ showLabels: !state.showLabels })),
-  selectNeighbourhood: ({ id, lat, lon, viewHeight }) =>
-    set({ selectedNeighbourhoodId: id, selectedVenueId: null, flyRequest: { lat, lon, viewHeight } }),
+  selectNeighbourhood: ({ id, lat, lon, zoom }) =>
+    set({ selectedNeighbourhoodId: id, selectedVenueId: null, flyRequest: { lat, lon, zoom } }),
   selectVenue: ({ id, lat, lon, neighbourhood }, { fly } = { fly: true }) =>
     set((state) => ({
       selectedVenueId: id,
       selectedNeighbourhoodId: neighbourhood,
-      flyRequest: fly ? { lat, lon, viewHeight: theme.camera.venueViewHeight } : state.flyRequest,
+      flyRequest: fly ? { lat, lon, zoom: theme.camera.venueZoom } : state.flyRequest,
     })),
   setHoveredVenue: (id) => set({ hoveredVenueId: id }),
   closePanel: () => set({ selectedNeighbourhoodId: null, selectedVenueId: null }),
-  setProgress: (progress) =>
-    set((state) => ({
-      progress,
-      initialLoadDone:
-        state.initialLoadDone || (progress.failed === 0 && progress.loaded === progress.total),
-    })),
+  setLoadState: (loadState) => set({ loadState }),
 }));

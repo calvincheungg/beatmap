@@ -11,8 +11,7 @@ describe('mapStore', () => {
       selectedNeighbourhoodId: null,
       selectedVenueId: null,
       hoveredVenueId: null,
-      progress: null,
-      initialLoadDone: false,
+      loadState: 'loading',
     }),
   );
 
@@ -31,13 +30,9 @@ describe('mapStore', () => {
     expect(useMapStore.getState().flat).toBe(false);
   });
 
-  it('remembers the first complete load', () => {
-    const { setProgress } = useMapStore.getState();
-    setProgress({ loaded: 1, failed: 0, total: 2 });
-    expect(useMapStore.getState().initialLoadDone).toBe(false);
-    setProgress({ loaded: 2, failed: 0, total: 2 });
-    setProgress({ loaded: 0, failed: 0, total: 9 });
-    expect(useMapStore.getState().initialLoadDone).toBe(true);
+  it('tracks whether the map has loaded', () => {
+    useMapStore.getState().setLoadState('ready');
+    expect(useMapStore.getState().loadState).toBe('ready');
   });
 
   it('toggles place names', () => {
@@ -46,17 +41,29 @@ describe('mapStore', () => {
   });
 
   it('opens the panel and starts a flight when a neighbourhood is picked', () => {
-    const area = { id: 'area', name: 'Area', lat: 43.7, lon: -79.4, viewHeight: 2000 };
+    const area = { id: 'area', name: 'Area', lat: 43.7, lon: -79.4, zoom: 14 };
     useMapStore.getState().selectNeighbourhood(area);
     const state = useMapStore.getState();
     expect(state.selectedNeighbourhoodId).toBe('area');
-    expect(state.flyRequest).toEqual({ lat: 43.7, lon: -79.4, viewHeight: 2000 });
+    expect(state.flyRequest).toEqual({ lat: 43.7, lon: -79.4, zoom: 14 });
     state.closePanel();
     expect(useMapStore.getState().selectedNeighbourhoodId).toBeNull();
   });
 
   it('opens the panel on a clicked pin without moving the camera', () => {
-    const venue = { id: 'v', name: 'V', lat: 43.7, lon: -79.4, neighbourhood: 'area' };
+    const venue = {
+      id: 'v',
+      name: 'V',
+      lat: 43.7,
+      lon: -79.4,
+      neighbourhood: 'area',
+      neighbourhoodName: 'Area',
+      address: '',
+      capacity: null,
+      sizeTier: 'small',
+      indoorOutdoor: 'indoor',
+      status: 'listed',
+    };
     useMapStore.getState().selectVenue(venue, { fly: false });
     const state = useMapStore.getState();
     expect(state.selectedVenueId).toBe('v');
@@ -65,13 +72,21 @@ describe('mapStore', () => {
   });
 
   it('flies to a venue picked in the panel', () => {
-    const venue = { id: 'v', name: 'V', lat: 43.7, lon: -79.4, neighbourhood: 'area' };
+    const venue = {
+      id: 'v',
+      name: 'V',
+      lat: 43.7,
+      lon: -79.4,
+      neighbourhood: 'area',
+      neighbourhoodName: 'Area',
+      address: '',
+      capacity: null,
+      sizeTier: 'small',
+      indoorOutdoor: 'indoor',
+      status: 'listed',
+    };
     useMapStore.getState().selectVenue(venue);
     expect(useMapStore.getState().flyRequest).toMatchObject({ lat: 43.7, lon: -79.4 });
   });
 
-  it('stores load progress', () => {
-    useMapStore.getState().setProgress({ loaded: 3, failed: 1, total: 10 });
-    expect(useMapStore.getState().progress).toEqual({ loaded: 3, failed: 1, total: 10 });
-  });
 });

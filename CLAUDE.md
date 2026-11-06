@@ -2,10 +2,10 @@
 
 ## Overview
 A web app showing Toronto/GTA live music events on a stylized isometric 3D map.
-Current phase: map only, with mock venue pins (pins not built yet). Milestones 1 to 3 are done.
+Current phase: map only, with mock venue pins (pins not built yet). Milestones 1 to 3 are done, rebuilt on MapLibre.
 
 ## Stack
-- Vite, React, TypeScript (strict), Three.js via React Three Fiber + drei, Zustand, Vitest.
+- Vite, React, TypeScript (strict), MapLibre GL JS, PMTiles, Zustand, Vitest.
 - TypeScript is pinned to 6.0 because `typescript-eslint` doesn't support 7 yet.
 - Map data: OpenStreetMap only, never Google Maps data or tiles. Protomaps builds
   also contain Natural Earth data, so don't add layers or zooms that rely on it.
@@ -20,39 +20,39 @@ npm run lint                     # ESLint
 npm test                         # unit tests (Vitest)
 npm run data:fetch               # regenerate public/data/gta.pmtiles (needs pmtiles CLI)
 npm run data:fetch -- downtown   # downtown extract only
+npm run data:geocode             # fill in lat/lon for new venues in the CSV
 ```
 
 ## Architecture
 | Path | Contents |
 |---|---|
-| `src/map/` | Plain TS, no React: projection, geometry, tile loading |
-| `src/map/projection.ts` | The only place that converts lat/lon to scene coordinates |
-| `src/map/isoMath.ts` | Isometric and flat camera maths |
-| `src/map/labelLayer.ts` | Place names, drawn on a 2D canvas above the map |
-| `src/map/layers/` | Tile features to merged geometry, per layer |
-| `src/map/tiles/` | Tile loading: web workers, `visibleTiles.ts`, `tileManager.ts` (mesh lifecycle, LRU cache) |
-| `src/map/materials.ts` | Shared materials |
-| `src/scene/` | React Three Fiber components: canvas, camera rig, tiles, lights, venue pins |
-| `src/scene/camera/` | Camera state and input controls (plain TS) |
+| `src/map/mapStyle.ts` | The whole MapLibre style, built from the theme: layers, road colours, labels |
+| `src/map/view.ts` | Isometric and flat camera angles, boundary clamp |
+| `src/map/halftone.ts` | Printed dot patterns for water and parks |
+| `src/scene/createMap.ts` | Creates the map and connects it to the store (plain TS) |
+| `src/scene/venueLayer.ts` | Venue pins as map layers, with hover and selection |
+| `src/scene/MapView.tsx` | The React component that hosts the map |
 | `src/ui/` | HTML interface, `tokens.ts` (theme to CSS variables), `style.css` |
-| `src/state/mapStore.ts` | Zustand store: view options, selection, fly requests, load progress |
-| `src/data/` | `TileSource` and PMTiles source; neighbourhoods and mock venues (typed JSON) |
-| `src/theme.ts` | All colours, fonts, sizes, layer draw order and level of detail bands |
-| `src/config.ts` | Loaded area, tile zoom, data URL |
+| `src/state/mapStore.ts` | Zustand store: view options, selection, fly requests, load state |
+| `src/data/toronto_music_venues.csv` | The only venue list. The app reads it directly |
+| `src/data/` | Venue and neighbourhood loaders; `neighbourhoods.json` is the base search list |
+| `src/theme.ts` | All colours, fonts and sizes |
+| `src/config.ts` | Map boundary, starting point, data URL |
 | `tests/` | Unit tests |
 | `scripts/fetch-data.sh` | Generates map extracts |
 
-Scene units are about 1 ground metre near the origin. Heights come from the tiles
-(`levels × 3 + 2` m); buildings with no height get 7 m.
+Heights come from the tiles (`levels × 3 + 2` m); buildings with no height get 7 m.
 
-The canvas uses `frameloop="demand"`: call `invalidate()` after anything that changes the view.
+MapLibre's worker must stay imported with `?worker&url` in `createMap.ts`, or production builds break.
+The Three.js version is kept at the git tag `three-js-version`.
 
 ## Performance rules (non-negotiable)
-- Never one React component or mesh per building/road/park. Merge geometry per tile
-  and layer in plain TS outside React.
-- Dispose geometries on tile unload. Share materials across tiles.
-- No React state updates inside `useFrame`; per-frame logic stays in `useFrame`.
-- Target 60 fps on a mid-range laptop. Report draw calls after rendering changes.
+- Never one React component or DOM marker per building, road, park or venue. Draw map
+  features through style layers.
+- Keep the map outside React state. Components talk to it through the store, and map events
+  update the store only on real changes, never every frame.
+- Remove the map and its listeners on unmount.
+- Target 60 fps on a mid-range laptop. Report frame rate and draw calls after rendering changes.
 
 ## Design system rules
 - The UI has a deliberate retro style (see Design direction).
@@ -70,7 +70,7 @@ The canvas uses `frameloop="demand"`: call `invalidate()` after anything that ch
 ## Coding conventions
 - TypeScript strict, no `any`.
 - Small, focused modules. Named exports.
-- Tests for projection and data parsing.
+- Tests for the map style, camera angles and data parsing.
 - Descriptive commit messages. No Claude attribution or co-author lines.
 
 ## Workflow

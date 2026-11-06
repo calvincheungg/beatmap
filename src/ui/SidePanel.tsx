@@ -22,7 +22,16 @@ export function SidePanel() {
           ×
         </button>
         <h2>{venue?.name ?? area.name}</h2>
-        {venue && <p>{area.name}</p>}
+        {venue && (
+          <>
+            <p>{venue.address}</p>
+            <p>
+              {area.name}
+              {venue.capacity ? ` · about ${venue.capacity.toLocaleString()} capacity` : ''}
+            </p>
+            {venue.status !== 'listed' && <p>Details not yet confirmed.</p>}
+          </>
+        )}
         {areaVenues.length === 0 ? (
           <p>Nothing listed here yet.</p>
         ) : (

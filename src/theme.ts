@@ -1,16 +1,4 @@
-/** Every colour and size used by the map. Restyle the app from this file. */
-
-export interface LodBand {
-  maxViewHeight: number;
-  tileZoom: number;
-  buildings: boolean;
-  edges: boolean;
-  minorRoads: boolean;
-  labels: 'locality' | 'neighbourhood';
-  lineScale: number;
-}
-
-export type LayerId = 'land' | 'water' | 'park' | 'roadsHighway' | 'roadsMajor' | 'roadsMinor' | 'buildings' | 'edges';
+/** Every colour and size used by the map and UI. Restyle the app from this file. */
 
 /** The palette shared by the map and the UI. See the gig-poster-ui skill. */
 const palette = {
@@ -24,6 +12,9 @@ const palette = {
   highwayOrange: 0xf28c28,
   fade: 0x8a8274,
 };
+
+/** Line widths in pixels at given zooms, interpolated in between. */
+export type WidthStops = readonly (readonly [zoom: number, width: number])[];
 
 export const theme = {
   background: palette.ink,
@@ -49,11 +40,10 @@ export const theme = {
     },
     fontFamily: "'Space Mono', 'IBM Plex Mono', monospace",
     displayFontFamily: "'Anton', 'Bebas Neue', sans-serif",
+    labelFontFamily: "'Archivo Black', 'Space Mono', sans-serif",
     headlineSize: '40px',
     panelWidth: '340px',
     edgeSize: '8px',
-    labelFontFamily: "'Archivo Black', 'Space Mono', sans-serif",
-    pinLabelOffset: '-46px',
     motionDuration: '200ms',
     fontSize: '15px',
     smallFontSize: '12px',
@@ -68,119 +58,88 @@ export const theme = {
     controlsBottom: '48px',
   },
 
-  /** Draw order, lowest first. Reorder these values to change the layer stack. */
-  renderOrder: {
-    land: 0,
-    water: 1,
-    park: 2,
-    roadsMinor: 3,
-    roadsMajor: 4,
-    roadsHighway: 5,
-    buildings: 6,
-    edges: 7,
-  } satisfies Record<LayerId, number>,
-
-  /** Ribbon widths in metres, keyed by the Protomaps `kind`. */
   roadWidths: {
-    highway: 26,
-    major_road: 16,
-    medium_road: 12,
-    minor_road: 8,
-    other: 4,
-  } as Record<string, number>,
+    highway: [[9, 1], [12, 2.5], [15, 9], [18, 36]] as WidthStops,
+    major: [[10, 0.5], [12, 1.2], [15, 6], [18, 24]] as WidthStops,
+    minor: [[12, 0.3], [15, 2.5], [18, 12]] as WidthStops,
+    /** The zoom at which minor roads first appear. */
+    minorMinZoom: 12,
+  },
 
-  waterLineWidths: {
-    river: 24,
-    canal: 14,
-    stream: 5,
-    ditch: 2,
-    drain: 2,
-  } as Record<string, number>,
+  waterLineWidths: [[10, 0.5], [15, 4], [18, 14]] satisfies WidthStops,
 
   buildings: {
     /** Dark greys. A building's colour is chosen from its height. */
     palette: [0x6b6e73, 0x63666b, 0x73767b, 0x5d6065, 0x686b70, 0x6f7277, 0x606368],
-    /** Roofs are multiplied by this so they read apart from the walls. */
-    roofTint: 1,
-    /** Corners next to wall segments shorter than this (metres) get no vertical line, so stepped towers don't go black. */
-    minCornerSegment: 6,
+    /** The zoom at which buildings first appear. */
+    minZoom: 13,
     /** Used when a building has no height. Tagged levels are already converted by the tiles. */
-    metresPerLevel: 3.5,
-    defaultLevels: 2,
-    edgeColor: palette.ink,
-    edgeOpacity: 0.9,
+    defaultHeight: 7,
   },
 
   light: {
-    // Neutral light that leaves roofs near full paper colour and darkens one side of each building.
-    ambientColor: 0xffffff,
-    ambientIntensity: 1.6,
-    directionalColor: 0xffffff,
-    directionalIntensity: 2,
-    direction: [-0.55, 0.8, 0.35] as const,
+    color: 0xffffff,
+    intensity: 0.75,
+    /** Radial distance, azimuth and polar angle, fixed to the map so rotating changes the lit side. */
+    position: [1.5, 300, 35] as [number, number, number],
   },
 
-  /**
-   * Level of detail, most detailed first. The camera uses the first band whose
-   * maxViewHeight (metres visible top to bottom) fits. lineScale widens roads and
-   * rivers so they stay visible when zoomed out.
-   */
-  lodBands: [
-    { maxViewHeight: 3000, tileZoom: 15, buildings: true, edges: true, minorRoads: true, labels: 'neighbourhood', lineScale: 1 },
-    { maxViewHeight: 5000, tileZoom: 14, buildings: true, edges: false, minorRoads: true, labels: 'neighbourhood', lineScale: 1.5 },
-    { maxViewHeight: 30000, tileZoom: 12, buildings: false, edges: false, minorRoads: false, labels: 'locality', lineScale: 2.5 },
-    { maxViewHeight: Infinity, tileZoom: 11, buildings: false, edges: false, minorRoads: false, labels: 'locality', lineScale: 5 },
-  ] satisfies LodBand[],
-
-  /** Tiles start loading this far (metres) below the screen, so tall buildings don't pop in. */
-  tallestBuildingMargin: 600,
-
-  /** Printed dots on water and parks. Spacing snaps to powers of two as the zoom changes. */
+  /** Printed dots on water and parks, repeated as an image pattern. */
   halftone: {
-    pixelSpacing: 7,
-    /** Dot radius, as a fraction of the spacing. */
+    tileSize: 8,
+    /** Dot radius, as a fraction of the tile. */
     radius: 0.2,
     dotColor: palette.ink,
     dotOpacity: 0.28,
   },
 
   labels: {
-    fontFamily: "'Archivo Black', 'Space Mono', sans-serif",
-    localitySize: 15,
-    neighbourhoodSize: 12,
+    glyphs: 'https://protomaps.github.io/basemaps-assets/fonts/{fontstack}/{range}.pbf',
+    font: ['Noto Sans Medium'],
+    placeSize: { locality: 15, neighbourhood: 12 },
+    streetSize: 11,
     fill: palette.paper,
     outline: palette.ink,
-    outlineWidth: 3,
-    /** Clear space kept around each label, in CSS pixels. */
-    padding: 6,
-    maxPerFrame: 60,
+    outlineWidth: 1.5,
+    /** Zooms at which street names first appear. */
+    majorStreetMinZoom: 13.5,
+    minorStreetMinZoom: 15,
   },
 
   /** Venue push-pins. They stay the same size on screen at every zoom. */
   pins: {
     heightPixels: 34,
-    hoverScale: 1.3,
+    activeScale: 1.3,
     color: palette.paper,
     hoverColor: palette.risoYellow,
     selectedColor: palette.risoRed,
     outlineColor: palette.ink,
-    /** Pins draw after everything on the map, so buildings never hide them. */
-    renderOrder: 10,
-  },
-
-  /** Fog starts and ends at these fractions of the view height above screen centre. */
-  fog: {
-    nearFraction: 0.1,
-    farFraction: 1.0,
+    /** Space between a pin's top and its name label, in pixels. */
+    labelGap: 4,
+    /** Nearby pins merge into a numbered stamp until this zoom. */
+    clusterRadius: 44,
+    clusterMaxZoom: 15,
+    /** Stamp radius in pixels: small, then larger from these venue counts. */
+    clusterSizes: { small: 14, medium: 18, mediumFrom: 5, large: 22, largeFrom: 15 },
+    clusterTextSize: 13,
+    clusterOutlineWidth: 3,
   },
 
   camera: {
-    minViewHeight: 250,
-    maxViewHeight: 70000,
+    minZoom: 9,
+    maxZoom: 18,
+    initialZoom: 14,
     /** Zoom used when flying to a venue from the side panel. */
-    venueViewHeight: 900,
-    initialViewHeight: 2600,
-    /** Higher is snappier. Used for zoom, rotate and fly-to easing. */
-    damping: 10,
+    venueZoom: 15.5,
+    /** Pitch for true isometric: 90 degrees minus an elevation of 35.264. */
+    isoPitch: 54.736,
+    /** A narrow field of view keeps parallel lines nearly parallel, close to orthographic. */
+    fieldOfView: 10,
+    rotateDuration: 300,
+    flyDuration: 1200,
   },
 };
+
+export function toCssColor(hex: number): string {
+  return `#${hex.toString(16).padStart(6, '0')}`;
+}

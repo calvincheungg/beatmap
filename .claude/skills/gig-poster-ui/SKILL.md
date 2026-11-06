@@ -70,13 +70,13 @@ Rules:
 - **Icons.** Simple, bold, slightly rough line icons in ink. No glossy, gradient or emoji-style icons.
 - **Empty states.** A crossed-out flyer or "NOTHING ON TONIGHT — CHECK BACK" in marker font.
 
-## Map styling (isometric Three.js map)
+## Map styling (MapLibre, in src/map/mapStyle.ts)
 - Shares the same palette as the UI. Night mode uses paper-dark as land.
-- Land: paper or paper-dark. Water: riso-blue with a halftone dot shader or texture. Parks: riso-green halftone.
+- Land: paper or paper-dark. Water: riso-blue with a halftone dot pattern. Parks: riso-green halftone.
 - Roads: minor streets in fade, major streets in riso-yellow, highways in highway-orange and thicker. No neon.
-- Buildings: flat dark greys with ink edge outlines (like a drawn map), with darker shading on one side to read as isometric. Avoid photoreal lighting.
+- Buildings: flat dark greys with darker shading on one side to read as isometric. MapLibre can't draw ink edge outlines on 3D buildings, so rely on face contrast. Avoid photoreal lighting.
 - Venue pins: push-pins or small stamped flyers standing on the map. Selected venue uses riso-red with a stamp-style label.
-- Labels: Archivo Black or Space Mono, ink on paper with a paper-coloured outline for legibility.
+- Labels: currently Noto Sans Medium, the font with ready-made map glyphs; move to Archivo Black once its glyphs are generated. Paper text with an ink outline on the dark map. Street names follow the roads.
 
 ## Motion
 - Snappy and physical, like paper being handled: quick slides, small drops, a 1–2 degree wiggle on hover.

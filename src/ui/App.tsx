@@ -1,4 +1,4 @@
-import { MapCanvas } from '../scene/MapCanvas';
+import { MapView } from '../scene/MapView';
 import { Attribution } from './Attribution';
 import { LoadingStatus } from './LoadingStatus';
 import { MapControls } from './MapControls';
@@ -8,7 +8,7 @@ import { SidePanel } from './SidePanel';
 export function App() {
   return (
     <>
-      <MapCanvas />
+      <MapView />
       <SearchBox />
       <SidePanel />
       <LoadingStatus />

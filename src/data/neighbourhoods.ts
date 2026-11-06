@@ -1,15 +1,37 @@
 import data from './neighbourhoods.json';
+import { venues, type Venue } from './venues';
 
 export interface Neighbourhood {
   id: string;
   name: string;
   lat: number;
   lon: number;
-  /** How much of the map to show on arrival, in metres top to bottom. */
-  viewHeight: number;
+  /** The map zoom to show on arrival. */
+  zoom: number;
 }
 
-export const neighbourhoods: Neighbourhood[] = data;
+/** The zoom for neighbourhoods that come only from the venue list. */
+const DERIVED_ZOOM = 15;
+
+/** Adds a search entry, centred on its venues, for any venue neighbourhood missing from the base list. */
+export function withVenueNeighbourhoods(base: Neighbourhood[], from: Venue[]): Neighbourhood[] {
+  const known = new Set(base.map((area) => area.id));
+  const groups = new Map<string, Venue[]>();
+  for (const venue of from) {
+    if (known.has(venue.neighbourhood)) continue;
+    groups.set(venue.neighbourhood, [...(groups.get(venue.neighbourhood) ?? []), venue]);
+  }
+  const derived = [...groups.entries()].map(([id, group]): Neighbourhood => ({
+    id,
+    name: group[0]!.neighbourhoodName,
+    lat: group.reduce((sum, venue) => sum + venue.lat, 0) / group.length,
+    lon: group.reduce((sum, venue) => sum + venue.lon, 0) / group.length,
+    zoom: DERIVED_ZOOM,
+  }));
+  return [...base, ...derived];
+}
+
+export const neighbourhoods: Neighbourhood[] = withVenueNeighbourhoods(data, venues);
 
 function normalize(text: string): string {
   return text
