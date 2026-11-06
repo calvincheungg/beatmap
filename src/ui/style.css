@@ -1,0 +1,80 @@
+/* Every value comes from a CSS variable set by tokens.ts, from src/theme.ts. */
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root,
+#map-root {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  background: var(--color-page);
+  color: var(--color-text);
+  font-family: var(--font-family);
+  font-size: var(--font-size);
+  overflow: hidden;
+}
+
+#map-root canvas {
+  cursor: grab;
+  touch-action: none;
+}
+
+#map-root canvas.dragging {
+  cursor: grabbing;
+}
+
+#rotate {
+  position: fixed;
+  right: var(--gutter);
+  bottom: var(--controls-bottom);
+  display: flex;
+  gap: var(--spacing);
+}
+
+#rotate button {
+  width: var(--control-size);
+  height: var(--control-size);
+  border: var(--border-width) solid var(--color-border);
+  background: var(--color-panel);
+  color: var(--color-text);
+  font-family: inherit;
+  font-size: var(--icon-size);
+  cursor: pointer;
+}
+
+#rotate button:hover {
+  border-color: var(--color-text);
+}
+
+#status {
+  position: fixed;
+  top: var(--gutter);
+  left: var(--gutter);
+  max-width: calc(100% - 2 * var(--gutter));
+  padding: var(--spacing);
+  border: var(--border-width) solid var(--color-border);
+  background: var(--color-panel);
+}
+
+#status.error {
+  color: var(--color-error);
+}
+
+#attribution {
+  position: fixed;
+  right: 0;
+  bottom: 0;
+  padding: var(--spacing);
+  background: var(--color-panel);
+  color: var(--color-muted);
+  font-size: var(--font-size-small);
+}
+
+#attribution a {
+  color: inherit;
+}
