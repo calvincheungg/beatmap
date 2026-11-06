@@ -107,4 +107,4 @@ Rules:
 2. The screen reads as a printed poster or zine, not an app dashboard.
 3. Text contrast passes and body text sits on plain paper.
 4. Works at phone width and with prefers-reduced-motion.
-5. Take a screenshot in the browser and compare against the reference images in /design/references (if present). Describe any differences.
+5. Take one low-resolution screenshot, per the limit in CLAUDE.md, and compare against the reference images in /design/references (if present). Describe any differences.

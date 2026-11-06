@@ -69,12 +69,13 @@ The canvas uses `frameloop="demand"`: call `invalidate()` after anything that ch
 - TypeScript strict, no `any`.
 - Small, focused modules. Named exports.
 - Tests for projection and data parsing.
-- Descriptive commit messages.
+- Descriptive commit messages. No Claude attribution or co-author lines.
 
 ## Workflow
 - Non-trivial changes: propose a short plan first and wait for OK.
-- After changes: run type check, lint and tests. Run the dev server and visually check
-  in a browser where possible. Summarize what changed and what to look at.
+- After changes: run type check, lint and tests, then take at most one low-resolution
+  screenshot. Only do more if something looks wrong or the change is risky, and say what
+  wasn't checked. Summarize what changed and what to look at.
 - Ask before adding dependencies or changing the data pipeline.
 
 ## Don'ts
