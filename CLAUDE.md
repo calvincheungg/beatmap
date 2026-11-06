@@ -2,7 +2,7 @@
 
 ## Overview
 A web app showing Toronto/GTA live music events on a stylized isometric 3D map.
-Current phase: map only, with mock venue pins (pins not built yet).
+Current phase: map only, with mock venue pins (pins not built yet). Milestones 1 and 2 are done; search and the side panel from Milestone 3 are in. Pins and touch pinch zoom remain.
 
 ## Stack
 - Vite, React, TypeScript (strict), Three.js via React Three Fiber + drei, Zustand, Vitest.
@@ -27,15 +27,17 @@ npm run data:fetch -- downtown   # downtown extract only
 |---|---|
 | `src/map/` | Plain TS, no React: projection, geometry, tile loading |
 | `src/map/projection.ts` | The only place that converts lat/lon to scene coordinates |
+| `src/map/isoMath.ts` | Isometric and flat camera maths |
+| `src/map/labelLayer.ts` | Place names, drawn on a 2D canvas above the map |
 | `src/map/layers/` | Tile features to merged geometry, per layer |
-| `src/map/tiles/` | Tile loading: web worker, `tileManager.ts` (mesh lifecycle) |
+| `src/map/tiles/` | Tile loading: web workers, `visibleTiles.ts`, `tileManager.ts` (mesh lifecycle, LRU cache) |
 | `src/map/materials.ts` | Shared materials |
 | `src/scene/` | React Three Fiber components: canvas, camera rig, tiles, lights |
-| `src/scene/camera/` | Isometric camera maths, camera, input controls (plain TS) |
+| `src/scene/camera/` | Camera state and input controls (plain TS) |
 | `src/ui/` | HTML interface, `tokens.ts` (theme to CSS variables), `style.css` |
-| `src/state/mapStore.ts` | Zustand store: rotation, load progress |
-| `src/data/` | `TileSource` interface and PMTiles source |
-| `src/theme.ts` | All colours, fonts, sizes and layer draw order |
+| `src/state/mapStore.ts` | Zustand store: view options, selection, fly requests, load progress |
+| `src/data/` | `TileSource` and PMTiles source; neighbourhoods and mock venues (typed JSON) |
+| `src/theme.ts` | All colours, fonts, sizes, layer draw order and level of detail bands |
 | `src/config.ts` | Loaded area, tile zoom, data URL |
 | `tests/` | Unit tests |
 | `scripts/fetch-data.sh` | Generates map extracts |

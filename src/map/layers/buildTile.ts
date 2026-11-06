@@ -5,6 +5,8 @@ import { buildBuildings, type BuildingInput } from './buildings';
 import { buildLand } from './land';
 import { buildParks } from './parks';
 import { buildRoads } from './roads';
+import { readLabels } from './labels';
+import { selectBandForZoom } from './lod';
 import { POLYGON, type LayerBuffers, type TileBuffers, type TileScale } from './types';
 import { buildWater } from './water';
 
@@ -14,12 +16,17 @@ export function buildTile(bytes: ArrayBuffer, z: number): TileBuffers {
   const extent = tile.layers.earth?.extent ?? tile.layers.water?.extent ?? 4096;
   const scale: TileScale = { extent, unitsToScene: tileSizeInScene(z) / extent };
 
+  const band = selectBandForZoom(z);
+
   return {
-    land: buildLand(tile.layers.earth, scale),
-    water: buildWater(tile.layers.water, scale),
-    park: buildParks(tile.layers.landuse, scale),
-    ...buildRoads(tile.layers.roads, scale),
-    ...buildBuildings(readBuildings(tile.layers.buildings), scale),
+    layers: {
+      land: buildLand(tile.layers.earth, scale),
+      water: buildWater(tile.layers.water, scale, band.lineScale),
+      park: buildParks(tile.layers.landuse, scale),
+      ...buildRoads(tile.layers.roads, scale, band),
+      ...(band.buildings ? buildBuildings(readBuildings(tile.layers.buildings), scale, band.edges) : {}),
+    },
+    labels: readLabels(tile.layers.places, scale, band),
   };
 }
 
@@ -44,7 +51,7 @@ function readBuildings(layer: VectorTileLayer | undefined): BuildingInput[] {
 /** The typed arrays to hand to postMessage, so they move rather than copy. */
 export function transferablesOf(buffers: TileBuffers): ArrayBuffer[] {
   const transfers: ArrayBuffer[] = [];
-  for (const layer of Object.values(buffers) as (LayerBuffers | undefined)[]) {
+  for (const layer of Object.values(buffers.layers) as (LayerBuffers | undefined)[]) {
     if (!layer) continue;
     for (const array of [layer.position, layer.index, layer.normal, layer.color]) {
       if (array) transfers.push(array.buffer as ArrayBuffer);

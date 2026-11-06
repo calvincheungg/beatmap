@@ -11,6 +11,11 @@ export function applyThemeTokens(root: HTMLElement = document.documentElement): 
     root.style.setProperty(`--color-${name}`, toCssColor(value));
   }
   root.style.setProperty('--font-family', ui.fontFamily);
+  root.style.setProperty('--font-display', ui.displayFontFamily);
+  root.style.setProperty('--headline-size', ui.headlineSize);
+  root.style.setProperty('--panel-width', ui.panelWidth);
+  root.style.setProperty('--edge-size', ui.edgeSize);
+  root.style.setProperty('--motion-duration', ui.motionDuration);
   root.style.setProperty('--font-size', ui.fontSize);
   root.style.setProperty('--font-size-small', ui.smallFontSize);
   root.style.setProperty('--icon-size', ui.iconSize);

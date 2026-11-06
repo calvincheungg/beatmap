@@ -1,22 +1,19 @@
-import { OrthographicCamera } from '@react-three/drei';
+import { OrthographicCamera, Stats } from '@react-three/drei';
 import { useMemo, useState } from 'react';
 import type { OrthographicCamera as ThreeOrthographicCamera } from 'three';
 import { MAP_BOUNDS } from '../config';
-import { lonLatToScene } from '../map/projection';
+import { boundsToScene } from '../map/projection';
 import { theme } from '../theme';
 import { CameraRig } from './CameraRig';
-import { IsoCamera, type SceneBounds } from './camera/isoCamera';
+import { IsoCamera } from './camera/isoCamera';
 import { MapTiles } from './MapTiles';
 
-function sceneBounds(): SceneBounds {
-  const northWest = lonLatToScene({ lat: MAP_BOUNDS.north, lon: MAP_BOUNDS.west });
-  const southEast = lonLatToScene({ lat: MAP_BOUNDS.south, lon: MAP_BOUNDS.east });
-  return { minX: northWest.x, maxX: southEast.x, minZ: northWest.z, maxZ: southEast.z };
-}
+/** `?stats` in the URL shows a frame time overlay during development. */
+const showStats = import.meta.env.DEV && new URLSearchParams(location.search).has('stats');
 
-export function MapScene() {
+export function MapScene({ labelCanvas }: { labelCanvas: HTMLCanvasElement | null }) {
   const [camera, setCamera] = useState<ThreeOrthographicCamera | null>(null);
-  const view = useMemo(() => (camera ? new IsoCamera(camera, sceneBounds()) : null), [camera]);
+  const view = useMemo(() => (camera ? new IsoCamera(camera, boundsToScene(MAP_BOUNDS)) : null), [camera]);
   const { light } = theme;
 
   return (
@@ -33,9 +30,10 @@ export function MapScene() {
       {view && (
         <>
           <CameraRig view={view} />
-          <MapTiles view={view} />
+          {labelCanvas && <MapTiles view={view} labelCanvas={labelCanvas} />}
         </>
       )}
+      {showStats && <Stats />}
     </>
   );
 }

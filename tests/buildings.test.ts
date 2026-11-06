@@ -107,6 +107,24 @@ describe('buildBuildings', () => {
     }
   });
 
+  it('omits edge lines when asked', () => {
+    const { buildings, edges } = buildBuildings([{ rings: [square(0, 0, 50)] }], scale, false);
+    expect(buildings).toBeDefined();
+    expect(edges).toBeUndefined();
+  });
+
+  it('skips vertical lines on finely stepped walls but keeps clean corners', () => {
+    const verticals = (ring: Pt[]) => {
+      const { edges } = buildBuildings([{ rings: [ring], height: 10 }], scale);
+      const p = edges!.position;
+      let count = 0;
+      for (let i = 0; i < p.length; i += 6) if (p[i] === p[i + 3] && p[i + 2] === p[i + 5]) count++;
+      return count;
+    };
+    expect(verticals(square(0, 0, 50))).toBe(4);
+    expect(verticals(square(0, 0, 2))).toBe(0);
+  });
+
   it('returns nothing for empty or inverted input', () => {
     expect(buildBuildings([], scale)).toEqual({});
     expect(buildBuildings([{ rings: [square(0, 0, 10)], height: 5, minHeight: 9 }], scale)).toEqual({});

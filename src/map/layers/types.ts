@@ -18,7 +18,21 @@ export interface LayerBuffers {
   boundingSphere: { x: number; y: number; z: number; radius: number };
 }
 
-export type TileBuffers = Partial<Record<LayerId, LayerBuffers>>;
+export type TileLayers = Partial<Record<LayerId, LayerBuffers>>;
+
+/** A place name, positioned relative to the tile's corner. Lower priority draws first. */
+export interface TileLabel {
+  name: string;
+  x: number;
+  z: number;
+  priority: number;
+  isLocality: boolean;
+}
+
+export interface TileBuffers {
+  layers: TileLayers;
+  labels: TileLabel[];
+}
 
 /** Tile units (0..extent) to scene units. */
 export interface TileScale {

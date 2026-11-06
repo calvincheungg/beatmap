@@ -93,6 +93,19 @@ export function lonLatToTile({ lat, lon }: LonLat, z: number): { x: number; y: n
   };
 }
 
+export interface SceneBounds {
+  minX: number;
+  maxX: number;
+  minZ: number;
+  maxZ: number;
+}
+
+export function boundsToScene(bounds: LonLatBounds): SceneBounds {
+  const northWest = lonLatToScene({ lat: bounds.north, lon: bounds.west });
+  const southEast = lonLatToScene({ lat: bounds.south, lon: bounds.east });
+  return { minX: northWest.x, maxX: southEast.x, minZ: northWest.z, maxZ: southEast.z };
+}
+
 export function tileRangeForBounds(bounds: LonLatBounds, z: number): TileRange {
   const nw = lonLatToTile({ lat: bounds.north, lon: bounds.west }, z);
   const se = lonLatToTile({ lat: bounds.south, lon: bounds.east }, z);

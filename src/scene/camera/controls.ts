@@ -4,12 +4,14 @@ const WHEEL_ZOOM_SPEED = 0.0015;
 /** Trackpad pinches report small wheel deltas, so they get a stronger response. */
 const PINCH_ZOOM_SPEED = 0.01;
 
-/** Drag to pan, scroll to zoom, Q and E to rotate. Returns a function that removes the listeners. */
+/** Drag to pan, scroll to zoom, Q and E to rotate, F for the flat map, L for place names. Returns a function that removes the listeners. */
 export function attachControls(
   canvas: HTMLElement,
   view: IsoCamera,
   onInput: () => void,
   onRotate: (steps: number) => void,
+  onToggleFlat: () => void,
+  onToggleLabels: () => void,
 ): () => void {
   const abort = new AbortController();
   const { signal } = abort;
@@ -67,6 +69,8 @@ export function attachControls(
       const key = event.key.toLowerCase();
       if (key === 'q') onRotate(-1);
       else if (key === 'e') onRotate(1);
+      else if (key === 'f') onToggleFlat();
+      else if (key === 'l') onToggleLabels();
     },
     { signal },
   );

@@ -6,6 +6,7 @@ const MISSING_DATA_MESSAGE =
 
 export function LoadingStatus() {
   const progress = useMapStore((state) => state.progress);
+  const initialLoadDone = useMapStore((state) => state.initialLoadDone);
   const lastError = progress?.lastError;
   const loaded = progress?.loaded ?? 0;
   const failed = progress?.failed ?? 0;
@@ -23,7 +24,7 @@ export function LoadingStatus() {
   else if (isError) message = `${failed} of ${total} map tiles failed to load. Reload to try again.`;
 
   return (
-    <div id="status" role="status" className={isError ? 'error' : undefined} hidden={done && failed === 0}>
+    <div id="status" role="status" className={isError ? 'error' : undefined} hidden={!isError && (initialLoadDone || (done && failed === 0))}>
       {message}
     </div>
   );

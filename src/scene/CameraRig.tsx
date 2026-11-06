@@ -1,11 +1,12 @@
 import { useFrame, useThree } from '@react-three/fiber';
 import { useEffect, useRef } from 'react';
 import type { Fog } from 'three';
+import { depthPerScreenUnit, FLAT_ELEVATION, ISO_ELEVATION } from '../map/isoMath';
+import { lonLatToScene } from '../map/projection';
 import { useMapStore } from '../state/mapStore';
 import { theme } from '../theme';
 import { attachControls } from './camera/controls';
 import { CAMERA_DISTANCE, type IsoCamera } from './camera/isoCamera';
-import { DEPTH_PER_SCREEN_UNIT } from './camera/isoMath';
 
 /** After an idle gap, the first frame shouldn't jump most of the way to the goal. */
 const MAX_FRAME_SECONDS = 1 / 30;
@@ -25,15 +26,29 @@ export function CameraRig({ view }: { view: IsoCamera }) {
   }, [view, width, height, invalidate]);
 
   useEffect(
-    () => attachControls(canvas, view, invalidate, (steps) => useMapStore.getState().rotate(steps)),
+    () =>
+      attachControls(
+        canvas,
+        view,
+        invalidate,
+        (steps) => useMapStore.getState().rotate(steps),
+        () => useMapStore.getState().toggleFlat(),
+        () => useMapStore.getState().toggleLabels(),
+      ),
     [canvas, view, invalidate],
   );
 
   useEffect(
     () =>
       useMapStore.subscribe((state, previous) => {
-        if (state.rotationSteps === previous.rotationSteps) return;
+        if (state.flyRequest && state.flyRequest !== previous.flyRequest) {
+          view.flyTo(lonLatToScene(state.flyRequest), state.flyRequest.viewHeight);
+          invalidate();
+        }
+        if (state.showLabels !== previous.showLabels) invalidate();
+        if (state.rotationSteps === previous.rotationSteps && state.flat === previous.flat) return;
         view.setRotationSteps(state.rotationSteps);
+        view.setFlat(state.flat);
         invalidate();
       }),
     [view, invalidate],
@@ -50,9 +65,13 @@ export function CameraRig({ view }: { view: IsoCamera }) {
     // An orthographic camera has no perspective, so scale the fog with the zoom:
     // the same share of the screen fades at every zoom level.
     if (fog.current) {
-      const perFraction = view.viewHeight * DEPTH_PER_SCREEN_UNIT;
-      fog.current.near = CAMERA_DISTANCE + theme.fog.nearFraction * perFraction;
-      fog.current.far = CAMERA_DISTANCE + theme.fog.farFraction * perFraction;
+      // Looking straight down, everything is the same distance away, so push the fog out of reach.
+      const elevation = view.currentElevation;
+      const flatness = (elevation - ISO_ELEVATION) / (FLAT_ELEVATION - ISO_ELEVATION);
+      const perFraction = view.viewHeight * depthPerScreenUnit(elevation);
+      const start = CAMERA_DISTANCE + theme.fog.nearFraction * perFraction + flatness * view.viewHeight * 2;
+      fog.current.near = start;
+      fog.current.far = start + (theme.fog.farFraction - theme.fog.nearFraction) * perFraction + 1;
     }
   });
 

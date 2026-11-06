@@ -26,6 +26,7 @@ All values live in the theme/tokens file. Never hard-code colours, fonts, shadow
 | riso-blue | #2F5BA8 | Secondary accent: links, water on the map |
 | riso-yellow | #F2C230 | Highlights, "FREE" stamps, hover marks |
 | riso-green | #3E8E5E | Parks on the map, "open now" |
+| highway-orange | #F28C28 | Highways on the map |
 | fade | #8A8274 | Muted text, past events |
 
 Rules:
@@ -72,8 +73,8 @@ Rules:
 ## Map styling (isometric Three.js map)
 - Shares the same palette as the UI. Night mode uses paper-dark as land.
 - Land: paper or paper-dark. Water: riso-blue with a halftone dot shader or texture. Parks: riso-green halftone.
-- Roads: ink lines; highways thicker. No neon.
-- Buildings: flat paper colours with ink edge outlines (like a drawn map), with darker shading on one side to read as isometric. Avoid photoreal lighting.
+- Roads: minor streets in fade, major streets in riso-yellow, highways in highway-orange and thicker. No neon.
+- Buildings: flat dark greys with ink edge outlines (like a drawn map), with darker shading on one side to read as isometric. Avoid photoreal lighting.
 - Venue pins: push-pins or small stamped flyers standing on the map. Selected venue uses riso-red with a stamp-style label.
 - Labels: Archivo Black or Space Mono, ink on paper with a paper-coloured outline for legibility.
 

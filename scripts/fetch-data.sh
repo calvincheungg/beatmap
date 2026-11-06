@@ -10,7 +10,7 @@ BUILD="${BUILD:-20261106}"
 AREA="${1:-gta}"
 
 case "$AREA" in
-  gta)      BBOX="-79.95,43.30,-78.80,44.10" ;;
+  gta)      BBOX="-79.90,43.47,-78.97,44.00" ;;
   downtown) BBOX="-79.45,43.62,-79.32,43.69" ;;
   *) echo "Unknown area: $AREA (use gta or downtown)" >&2; exit 1 ;;
 esac

@@ -31,7 +31,7 @@ export function defaultBuildingHeight(): number {
  * outlines, and buildings repeat across tile edges, so this gives coplanar
  * surfaces the same colour and prevents visible z-fighting.
  */
-export function buildBuildings(inputs: BuildingInput[], scale: TileScale): BuildingBuffers {
+export function buildBuildings(inputs: BuildingInput[], scale: TileScale, includeEdges = true): BuildingBuffers {
   const positions: number[] = [];
   const normals: number[] = [];
   const colors: number[] = [];
@@ -102,9 +102,12 @@ export function buildBuildings(inputs: BuildingInput[], scale: TileScale): Build
         }
         indices.push(v, v + 1, v + 2, v, v + 2, v + 3);
 
+        if (!includeEdges) continue;
         edges.push(ax, top, az, bx, top, bz);
         const previous = points[(i - 1 + points.length) % points.length]!;
-        if (turnAngle(previous, a, b) > CORNER_MIN_TURN) edges.push(ax, bottom, az, ax, top, az);
+        const previousLength = Math.hypot(a.x - previous.x, a.y - previous.y) * s;
+        const isCleanCorner = Math.min(len, previousLength) >= theme.buildings.minCornerSegment;
+        if (isCleanCorner && turnAngle(previous, a, b) > CORNER_MIN_TURN) edges.push(ax, bottom, az, ax, top, az);
       }
     });
   }

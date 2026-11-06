@@ -2,7 +2,7 @@
 
 A stylized isometric 3D map of Toronto, built with React, Three.js (React Three Fiber) and TypeScript, for showing live music events.
 
-**Status: Milestone 1.** Downtown Toronto with water, parks, roads, extruded buildings and the isometric camera. The GTA, level of detail, venue pins and search come next.
+**Status: Milestone 2.** The GTA, covering Mississauga, Brampton, Vaughan, Markham, Pickering and Toronto, with level of detail, tiles that load as you move, place names, isometric and flat views, neighbourhood search and a side panel. Venue pins and touch pinch zoom come next.
 
 ## Run it
 
@@ -31,7 +31,7 @@ This is for local development only: it loads more slowly, the build eventually g
 | `npm test` | Run the unit tests |
 | `npm run build` | Type check and build for production |
 
-**Controls:** drag to pan, scroll or trackpad-pinch to zoom, Q/E or the on-screen buttons to rotate.
+**Controls:** drag to pan, scroll or trackpad-pinch to zoom, Q/E or the on-screen buttons to rotate, F or the FLAT/ISO button to switch views, L or the NAMES button to show or hide place names. Add `?stats` to the URL in development for a frame time overlay.
 
 ## Map data
 
@@ -39,17 +39,17 @@ All map features come from [OpenStreetMap](https://www.openstreetmap.org/copyrig
 
 The data is packaged by [Protomaps](https://protomaps.com) as vector tiles in a single PMTiles file. The browser fetches only the tiles it needs using HTTP range requests.
 
-Protomaps builds also include some non-OSM data. The app doesn't draw the `landcover` layer, and Milestone 1 only reads zoom 15 tiles.
+Protomaps builds also include some non-OSM data. The app doesn't draw the `landcover` layer and never loads tiles below zoom 10.
 
 ### Regenerate or replace the data
 
 ```bash
-npm run data:fetch                         # GTA: Burlington to Oshawa, lake to Newmarket
+npm run data:fetch                         # Mississauga and Brampton to Pickering
 npm run data:fetch -- downtown             # Downtown only: public/data/downtown.pmtiles
 BUILD=20261201 npm run data:fetch          # A specific daily build
 ```
 
-Builds are listed at <https://maps.protomaps.com/builds/>, and older ones get removed. To change the area, edit the bounding boxes in [scripts/fetch-data.sh](scripts/fetch-data.sh).
+Builds are listed at <https://maps.protomaps.com/builds/>, and older ones get removed. To change the area, edit the bounding box in [scripts/fetch-data.sh](scripts/fetch-data.sh) and `MAP_BOUNDS` in [src/config.ts](src/config.ts).
 
 To use a file with another name or location, set `VITE_PMTILES_URL` (see [.env.example](.env.example)). A production host must support HTTP range requests.
 
@@ -65,8 +65,8 @@ Heights come from the tiles, which convert `building:levels` to `levels × 3 + 2
 | --- | --- |
 | `src/theme.ts` | All colours, fonts, sizes and the layer draw order |
 | `src/config.ts` | Loaded area, tile zoom and data URL |
-| `src/map/` | Plain TypeScript: projection, geometry builders, tile loading in a web worker |
-| `src/data/` | Tile sources |
+| `src/map/` | Plain TypeScript: projection, camera maths, geometry builders, labels, tile loading in web workers |
+| `src/data/` | Tile sources, plus neighbourhoods and mock venues |
 | `src/scene/` | React Three Fiber components, plus the isometric camera and controls |
 | `src/ui/` | HTML interface and CSS |
 | `src/state/` | Zustand store |
