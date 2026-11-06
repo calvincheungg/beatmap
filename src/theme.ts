@@ -10,6 +10,7 @@ const palette = {
   risoYellow: 0xf2c230,
   risoGreen: 0x3e8e5e,
   highwayOrange: 0xf28c28,
+  selectedPurple: 0x7b2fbe,
   fade: 0x8a8274,
 };
 
@@ -110,9 +111,9 @@ export const theme = {
   pins: {
     heightPixels: 34,
     activeScale: 1.3,
-    color: palette.paper,
+    color: palette.risoRed,
     hoverColor: palette.risoYellow,
-    selectedColor: palette.risoRed,
+    selectedColor: palette.selectedPurple,
     outlineColor: palette.ink,
     /** Space between a pin's top and its name label, in pixels. */
     labelGap: 4,

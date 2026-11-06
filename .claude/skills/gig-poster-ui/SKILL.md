@@ -22,11 +22,12 @@ All values live in the theme/tokens file. Never hard-code colours, fonts, shadow
 | paper | #F2EBDD | Main background (light mode) |
 | paper-dark | #1B1A17 | Night-mode background, the map at night |
 | ink | #141414 | Text, outlines, borders |
-| riso-red | #E3412B | Primary accent: CTAs, selected venue, "tonight" |
+| riso-red | #E3412B | Primary accent: CTAs, venue pins, "tonight" |
 | riso-blue | #2F5BA8 | Secondary accent: links, water on the map |
 | riso-yellow | #F2C230 | Highlights, "FREE" stamps, hover marks |
 | riso-green | #3E8E5E | Parks on the map, "open now" |
 | highway-orange | #F28C28 | Highways on the map |
+| selected-purple | #7B2FBE | The selected venue pin only |
 | fade | #8A8274 | Muted text, past events |
 
 Rules:
@@ -75,7 +76,7 @@ Rules:
 - Land: paper or paper-dark. Water: riso-blue with a halftone dot pattern. Parks: riso-green halftone.
 - Roads: minor streets in fade, major streets in riso-yellow, highways in highway-orange and thicker. No neon.
 - Buildings: flat dark greys with darker shading on one side to read as isometric. MapLibre can't draw ink edge outlines on 3D buildings, so rely on face contrast. Avoid photoreal lighting.
-- Venue pins: push-pins or small stamped flyers standing on the map. Selected venue uses riso-red with a stamp-style label.
+- Venue pins: push-pins or small stamped flyers standing on the map. Pins are riso-red; the selected venue uses selected-purple with a stamp-style label.
 - Labels: currently Noto Sans Medium, the font with ready-made map glyphs; move to Archivo Black once its glyphs are generated. Paper text with an ink outline on the dark map. Street names follow the roads.
 
 ## Motion
