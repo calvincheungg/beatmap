@@ -101,6 +101,8 @@ npx supabase@latest login
 npx supabase@latest link --project-ref your-project-ref
 ```
 
+The CLI targets a local Docker database unless told otherwise, so its other database commands need `--remote` to reach the linked project. `npm run db:push` already includes it.
+
 For a brand new project, `npm run db:push` applies everything. A test requires row level security on every table, because tables without it can be exposed to the public key.
 
 ### Building heights
