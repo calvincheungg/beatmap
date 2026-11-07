@@ -69,23 +69,113 @@ body {
   color: var(--color-text);
 }
 
-#search select {
-  width: 100%;
-  height: var(--control-size);
+#filter-row {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--spacing);
   margin-top: var(--spacing);
+}
+
+.dropdown-button {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing);
+  width: 100%;
+  min-width: 0;
+  height: var(--control-size);
   padding: 0 var(--spacing);
   border: var(--border-width) solid var(--color-border);
-  border-radius: 0;
   background: var(--color-panel);
   color: var(--color-text);
   font-family: inherit;
   font-size: var(--font-size);
   font-weight: 700;
+  text-align: left;
+  cursor: pointer;
+}
+
+.dropdown-button span:first-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dropdown-button.is-active {
+  background: var(--color-tape);
+}
+
+.dropdown-group {
+  border-bottom: var(--border-width) solid var(--color-border);
+  font-size: var(--font-size-small);
+  font-weight: 700;
+  text-transform: uppercase;
+  cursor: default;
+}
+
+#search li.dropdown-group {
+  cursor: default;
+}
+
+#search ul:focus {
+  outline: none;
+}
+
+/* The grouped list sits inside the scrolling list, so it only holds options. */
+#search .dropdown-items {
+  position: static;
+  border: 0;
+  max-height: none;
+  overflow: visible;
+}
+
+#search li[role='presentation'] {
+  padding: 0;
+}
+
+.dropdown-group {
+  padding: var(--spacing);
+}
+
+#date-range {
+  position: absolute;
+  z-index: 1;
+  top: var(--control-size);
+  left: 0;
+  right: 0;
+  display: grid;
+  gap: var(--spacing);
+  padding: var(--spacing);
+  border: var(--border-width) solid var(--color-border);
+  border-top: 0;
+  background: var(--color-panel);
+  color: var(--color-text);
+}
+
+#date-range label {
+  display: grid;
+  gap: var(--spacing);
+  font-weight: 700;
+}
+
+#date-range input {
+  color-scheme: light;
+}
+
+#date-range button {
+  min-height: var(--control-size);
+  border: var(--border-width) solid var(--color-border);
+  background: var(--color-panel);
+  color: var(--color-text);
+  font: inherit;
+  font-weight: 700;
+  box-shadow: var(--shadow-offset) var(--shadow-offset) 0 var(--color-accent);
   cursor: pointer;
 }
 
 /* Beside the search box, so it never overlaps the side panel below it. */
-#genre-summary {
+#filter-summary {
   position: fixed;
   top: var(--gutter);
   left: calc(var(--gutter) * 2 + var(--panel-width));
@@ -296,7 +386,8 @@ body {
 }
 
 #search input:focus-visible,
-#search select:focus-visible,
+.dropdown-button:focus-visible,
+#date-range button:focus-visible,
 #side-panel button:focus-visible {
   outline: var(--border-width) solid var(--color-accent);
   outline-offset: calc(var(--border-width) * -1);
@@ -390,7 +481,7 @@ body {
     display: none;
   }
 
-  #genre-summary {
+  #filter-summary {
     top: calc(var(--gutter) * 3 + var(--control-size) * 3 + var(--spacing));
     left: var(--gutter);
     max-width: calc(100% - 2 * var(--gutter));

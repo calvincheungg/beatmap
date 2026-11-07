@@ -91,19 +91,39 @@ export function todayString(now: Date = new Date()): string {
   return `${now.getFullYear()}-${month}-${day}`;
 }
 
-/** True if a show fits the genre filter. A null filter matches everything. */
-export function matchesGenre(event: ShowEvent, genre: string | null): boolean {
-  return genre === null || event.genre === genre || event.subGenre === genre;
+/** What the visitor has narrowed the listings to. Null means no limit. */
+export interface ShowFilter {
+  genre: string | null;
+  from: string | null;
+  to: string | null;
+}
+
+export const NO_FILTER: ShowFilter = { genre: null, from: null, to: null };
+
+export function isFiltering({ genre, from, to }: ShowFilter): boolean {
+  return genre !== null || from !== null || to !== null;
+}
+
+/** True if a show fits the filter. A genre matches a show's main genre or its sub-genre. */
+export function matchesFilter(event: ShowEvent, { genre, from, to }: ShowFilter): boolean {
+  if (genre !== null && event.genre !== genre && event.subGenre !== genre) return false;
+  if (from !== null && event.date < from) return false;
+  return to === null || event.date <= to;
 }
 
 /** A venue's shows from today on, since a page can stay open for days. They're already in date order. */
-export function upcomingShows(events: ShowEvent[], venueId: string, today: string, genre: string | null = null): ShowEvent[] {
-  return events.filter((event) => event.venueId === venueId && event.date >= today && matchesGenre(event, genre));
+export function upcomingShows(events: ShowEvent[], venueId: string, today: string, filter: ShowFilter = NO_FILTER): ShowEvent[] {
+  return events.filter((event) => event.venueId === venueId && event.date >= today && matchesFilter(event, filter));
 }
 
-/** The venues with at least one upcoming show that fits the genre filter. */
-export function venuesWithShows(events: ShowEvent[], today: string, genre: string | null = null): Set<string> {
-  return new Set(events.filter((event) => event.date >= today && matchesGenre(event, genre)).map((event) => event.venueId));
+/** Every show from today on that fits the filter. */
+export function matchingShows(events: ShowEvent[], today: string, filter: ShowFilter = NO_FILTER): ShowEvent[] {
+  return events.filter((event) => event.date >= today && matchesFilter(event, filter));
+}
+
+/** The venues with at least one upcoming show that fits the filter. */
+export function venuesWithShows(events: ShowEvent[], today: string, filter: ShowFilter = NO_FILTER): Set<string> {
+  return new Set(matchingShows(events, today, filter).map((event) => event.venueId));
 }
 
 export interface GenreCount {
@@ -117,22 +137,27 @@ function countBy(names: (string | null)[]): GenreCount[] {
   return [...counts].map(([name, count]) => ({ name, count })).sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
 }
 
-/** Main genres with upcoming shows, most shows first. These fill the filter dropdown. */
-export function genreOptions(events: ShowEvent[], today: string): GenreCount[] {
-  return countBy(events.filter((event) => event.date >= today).map((event) => event.genre));
+export interface GenreOptions {
+  genres: GenreCount[];
+  /** More specific tags like Punk. A name that's also a main genre appears only there. */
+  subGenres: GenreCount[];
+}
+
+/** Genres with upcoming shows in the date range, most shows first. The genre filter itself is ignored. */
+export function genreOptions(events: ShowEvent[], today: string, filter: ShowFilter = NO_FILTER): GenreOptions {
+  const shows = matchingShows(events, today, { ...filter, genre: null });
+  const genres = countBy(shows.map((event) => event.genre));
+  const mainNames = new Set(genres.map((item) => item.name));
+  return { genres, subGenres: countBy(shows.map((event) => event.subGenre)).filter((item) => !mainNames.has(item.name)) };
 }
 
 /** Genres and sub-genres matching a search, most shows first. An empty search finds nothing. */
-export function searchGenres(query: string, events: ShowEvent[], today: string): GenreCount[] {
+export function searchGenres(query: string, events: ShowEvent[], today: string, filter: ShowFilter = NO_FILTER): GenreCount[] {
   const wanted = query.trim().toLowerCase();
   if (!wanted) return [];
-  const upcoming = events.filter((event) => event.date >= today);
-  // Main genres count every show in them, so they take priority over a sub-genre of the same name.
-  const main = countBy(upcoming.map((event) => event.genre));
-  const mainNames = new Set(main.map((item) => item.name));
-  const sub = countBy(upcoming.map((event) => event.subGenre)).filter((item) => !mainNames.has(item.name));
+  const { genres, subGenres } = genreOptions(events, today, filter);
   const startsWith = (item: GenreCount) => (item.name.toLowerCase().startsWith(wanted) ? 0 : 1);
-  return [...main, ...sub]
+  return [...genres, ...subGenres]
     .filter((item) => item.name.toLowerCase().includes(wanted))
     .sort((a, b) => startsWith(a) - startsWith(b) || b.count - a.count);
 }

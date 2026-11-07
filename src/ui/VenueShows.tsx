@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { formatShowDate, formatShowTime, showStatusLabel, todayString, upcomingShows } from '../data/events';
-import { useMapStore } from '../state/mapStore';
+import { formatShowDate, formatShowTime, isFiltering, showStatusLabel, todayString, upcomingShows } from '../data/events';
+import { showFilterFrom, useMapStore } from '../state/mapStore';
 
 /** How many shows to list before the "show all" button. */
 const INITIAL_SHOWS = 10;
@@ -9,13 +9,16 @@ const INITIAL_SHOWS = 10;
 export function VenueShows({ venueId }: { venueId: string }) {
   const events = useMapStore((state) => state.events);
   const genre = useMapStore((state) => state.selectedGenre);
+  const dateFilter = useMapStore((state) => state.dateFilter);
   const [showAll, setShowAll] = useState(false);
 
   if (events === null) return <p>Show listings aren't available right now.</p>;
 
-  const shows = upcomingShows(events, venueId, todayString(), genre);
+  const today = todayString();
+  const filter = showFilterFrom(genre, dateFilter, today);
+  const shows = upcomingShows(events, venueId, today, filter);
   if (shows.length === 0) {
-    return <p>{genre ? `No upcoming ${genre} shows listed here.` : 'No upcoming shows listed on Ticketmaster.'}</p>;
+    return <p>{isFiltering(filter) ? 'No shows here match your filters.' : 'No upcoming shows listed on Ticketmaster.'}</p>;
   }
   const visible = showAll ? shows : shows.slice(0, INITIAL_SHOWS);
 

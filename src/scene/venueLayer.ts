@@ -1,7 +1,7 @@
 import { LngLatBounds, Marker, type GeoJSONSource, type Map as MapLibreMap, type MapMouseEvent } from 'maplibre-gl';
-import { todayString, venuesWithShows } from '../data/events';
+import { isFiltering, todayString, venuesWithShows } from '../data/events';
 import { venues } from '../data/venues';
-import { useMapStore } from '../state/mapStore';
+import { showFilterFrom, useMapStore } from '../state/mapStore';
 import { theme, toCssColor } from '../theme';
 
 const SOURCE = 'venues';
@@ -72,10 +72,12 @@ export function addVenueLayer(map: MapLibreMap): () => void {
   };
   const data = pinData();
 
-  /** With a genre filter on, only matching venues appear, so cluster numbers stay accurate. */
-  const genreVenues = () => {
-    const { events, selectedGenre } = useMapStore.getState();
-    return selectedGenre && events ? venuesWithShows(events, todayString(), selectedGenre) : undefined;
+  /** With a filter on, only matching venues appear, so cluster numbers stay accurate. */
+  const filteredVenues = () => {
+    const { events, selectedGenre, dateFilter } = useMapStore.getState();
+    const today = todayString();
+    const filter = showFilterFrom(selectedGenre, dateFilter, today);
+    return events && isFiltering(filter) ? venuesWithShows(events, today, filter) : undefined;
   };
 
   const showMatchingVenues = (only: Set<string>) => {
@@ -222,11 +224,12 @@ export function addVenueLayer(map: MapLibreMap): () => void {
   applySelection();
 
   const stopListening = useMapStore.subscribe((state, previous) => {
-    if (state.events !== previous.events || state.selectedGenre !== previous.selectedGenre) {
-      const only = genreVenues();
+    const filterChanged = state.selectedGenre !== previous.selectedGenre || state.dateFilter !== previous.dateFilter;
+    if (state.events !== previous.events || filterChanged) {
+      const only = filteredVenues();
       (map.getSource(SOURCE) as GeoJSONSource).setData(pinData(only));
       (map.getSource(ACTIVE_SOURCE) as GeoJSONSource).setData(pinData());
-      if (only && state.selectedGenre !== previous.selectedGenre) showMatchingVenues(only);
+      if (only && filterChanged) showMatchingVenues(only);
     }
     if (state.hoveredVenueId !== previous.hoveredVenueId || state.selectedVenueId !== previous.selectedVenueId) {
       applySelection();

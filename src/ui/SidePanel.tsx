@@ -1,7 +1,7 @@
 import { todayString, upcomingShows } from '../data/events';
 import { findNeighbourhood } from '../data/neighbourhoods';
 import { venuesIn } from '../data/venues';
-import { useMapStore } from '../state/mapStore';
+import { showFilterFrom, useMapStore } from '../state/mapStore';
 import { VenueShows } from './VenueShows';
 
 function ShowCount({ count }: { count: number }) {
@@ -17,8 +17,10 @@ export function SidePanel() {
   const closePanel = useMapStore((state) => state.closePanel);
   const events = useMapStore((state) => state.events);
   const genre = useMapStore((state) => state.selectedGenre);
+  const dateFilter = useMapStore((state) => state.dateFilter);
 
   const today = todayString();
+  const filter = showFilterFrom(genre, dateFilter, today);
   const area = findNeighbourhood(selectedId);
   if (!area) return null;
   const areaVenues = venuesIn(area.id);
@@ -64,7 +66,7 @@ export function SidePanel() {
                   onClick={() => selectVenue(listed)}
                 >
                   {listed.name}
-                  {events && <ShowCount count={upcomingShows(events, listed.id, today, genre).length} />}
+                  {events && <ShowCount count={upcomingShows(events, listed.id, today, filter).length} />}
                 </button>
               </li>
             ))}

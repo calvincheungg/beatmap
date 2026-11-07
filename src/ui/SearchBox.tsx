@@ -1,7 +1,7 @@
 import { useState, type KeyboardEvent } from 'react';
 import { searchGenres, todayString } from '../data/events';
 import { searchNeighbourhoods, type Neighbourhood } from '../data/neighbourhoods';
-import { useMapStore } from '../state/mapStore';
+import { showFilterFrom, useMapStore } from '../state/mapStore';
 
 type Result = { type: 'area'; area: Neighbourhood } | { type: 'genre'; name: string; count: number };
 
@@ -14,11 +14,13 @@ export function SearchBox() {
   const selectNeighbourhood = useMapStore((state) => state.selectNeighbourhood);
   const setGenre = useMapStore((state) => state.setGenre);
   const events = useMapStore((state) => state.events);
+  const dateFilter = useMapStore((state) => state.dateFilter);
   const [query, setQuery] = useState('');
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState(0);
 
-  const genres = searchGenres(query, events ?? [], todayString()).map(
+  const today = todayString();
+  const genres = searchGenres(query, events ?? [], today, showFilterFrom(null, dateFilter, today)).map(
     (item): Result => ({ type: 'genre', ...item }),
   );
   const areas = searchNeighbourhoods(query).map((area): Result => ({ type: 'area', area }));

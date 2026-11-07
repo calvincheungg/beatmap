@@ -6,7 +6,7 @@ import { useMapStore } from '../state/mapStore';
 import { Attribution } from './Attribution';
 import { LoadingStatus } from './LoadingStatus';
 import { MapControls } from './MapControls';
-import { GenreFilter } from './GenreFilter';
+import { FilterBar } from './FilterBar';
 import { SearchBox } from './SearchBox';
 import { SidePanel } from './SidePanel';
 
@@ -20,7 +20,7 @@ export function App() {
       <MapView />
       <div id="search">
         <SearchBox />
-        <GenreFilter />
+        <FilterBar />
       </div>
       <SidePanel />
       <LoadingStatus />

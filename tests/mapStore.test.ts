@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import { useMapStore } from '../src/state/mapStore';
+import { ANY_DATE } from '../src/data/dateFilter';
+import { showFilterFrom, useMapStore } from '../src/state/mapStore';
 
 describe('mapStore', () => {
   beforeEach(() =>
@@ -15,6 +16,7 @@ describe('mapStore', () => {
       events: [],
       eventsLoaded: false,
       selectedGenre: null,
+      dateFilter: ANY_DATE,
     }),
   );
 
@@ -38,6 +40,11 @@ describe('mapStore', () => {
     expect(useMapStore.getState().selectedGenre).toBe('Rock');
     useMapStore.getState().setGenre(null);
     expect(useMapStore.getState().selectedGenre).toBeNull();
+  });
+
+  it('builds the listings filter from the genre and date choices', () => {
+    expect(showFilterFrom('Rock', { preset: 'week', from: null, to: null }, '2026-11-06')).toEqual({ genre: 'Rock', from: '2026-11-06', to: '2026-11-12' });
+    expect(showFilterFrom(null, ANY_DATE, '2026-11-06')).toEqual({ genre: null, from: null, to: null });
   });
 
   it('records loaded events and failed loads', () => {

@@ -81,7 +81,7 @@ To set it up:
 npm run data:events
 ```
 
-Genres come from Ticketmaster too. Search finds genres and sub-genres, and the filter limits the map and panel to matching shows. Placeholder labels like "Other" count as no genre.
+Genres come from Ticketmaster too. Search finds genres and sub-genres, and the genre and date filters limit the map and panel to matching shows. Choosing a main genre like Rock includes its sub-genres, like Punk. Placeholder labels like "Other" count as no genre.
 
 Each sync removes upcoming events no longer listed, and deletes events more than 30 days past. A show's `timing` (`upcoming` or `over`) comes from the `events_with_timing` view rather than being stored.
 

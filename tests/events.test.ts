@@ -3,8 +3,10 @@ import {
   formatShowDate,
   formatShowTime,
   genreOptions,
+  isFiltering,
   loadEvents,
-  matchesGenre,
+  matchesFilter,
+  matchingShows,
   parseEventRows,
   searchGenres,
   showStatusLabel,
@@ -135,31 +137,63 @@ describe('genres', () => {
     show('d', 'w', '2026-12-04', null, null),
   ];
 
-  it('matches a genre or sub-genre, and null matches everything', () => {
-    expect(matchesGenre(events[1]!, 'Rock')).toBe(true);
-    expect(matchesGenre(events[1]!, 'Punk')).toBe(true);
-    expect(matchesGenre(events[1]!, 'Pop')).toBe(false);
-    expect(matchesGenre(events[4]!, null)).toBe(true);
-    expect(matchesGenre(events[4]!, 'Rock')).toBe(false);
+  const genre = (name: string | null) => ({ genre: name, from: null, to: null });
+
+  it('matches a genre or sub-genre, and no filter matches everything', () => {
+    expect(matchesFilter(events[1]!, genre('Rock'))).toBe(true);
+    expect(matchesFilter(events[1]!, genre('Punk'))).toBe(true);
+    expect(matchesFilter(events[1]!, genre('Pop'))).toBe(false);
+    expect(matchesFilter(events[4]!, genre(null))).toBe(true);
+    expect(matchesFilter(events[4]!, genre('Rock'))).toBe(false);
   });
 
-  it('filters a venue by genre', () => {
-    expect(upcomingShows(events, 'v', today, 'Emo').map((event) => event.id)).toEqual(['b']);
-    expect(upcomingShows(events, 'w', today, 'Rock')).toEqual([]);
+  it('matches dates inclusively, on either or both ends', () => {
+    const day = events[1]!; // 2026-12-01
+    expect(matchesFilter(day, { genre: null, from: '2026-12-01', to: '2026-12-01' })).toBe(true);
+    expect(matchesFilter(day, { genre: null, from: '2026-12-02', to: null })).toBe(false);
+    expect(matchesFilter(day, { genre: null, from: null, to: '2026-11-30' })).toBe(false);
+  });
+
+  it('combines genre and dates', () => {
+    expect(matchingShows(events, today, { genre: 'Rock', from: '2026-12-02', to: null }).map((event) => event.id)).toEqual(['b']);
+  });
+
+  it('knows when a filter is on', () => {
+    expect(isFiltering(genre(null))).toBe(false);
+    expect(isFiltering(genre('Rock'))).toBe(true);
+    expect(isFiltering({ genre: null, from: today, to: null })).toBe(true);
+  });
+
+  it('filters a venue', () => {
+    expect(upcomingShows(events, 'v', today, genre('Emo')).map((event) => event.id)).toEqual(['b']);
+    expect(upcomingShows(events, 'w', today, genre('Rock'))).toEqual([]);
     expect(upcomingShows(events, 'v', today)).toHaveLength(2);
   });
 
   it('finds venues with a matching upcoming show', () => {
-    expect(venuesWithShows(events, today, 'Rock')).toEqual(new Set(['v']));
-    expect(venuesWithShows(events, today, 'Polka')).toEqual(new Set());
+    expect(venuesWithShows(events, today, genre('Rock'))).toEqual(new Set(['v']));
+    expect(venuesWithShows(events, today, genre('Polka'))).toEqual(new Set());
     expect(venuesWithShows(events, today)).toEqual(new Set(['v', 'w']));
   });
 
-  it('lists upcoming main genres, most shows first, skipping empty ones', () => {
-    expect(genreOptions(events, today)).toEqual([
-      { name: 'Rock', count: 2 },
-      { name: 'Pop', count: 1 },
-    ]);
+  it('lists main genres and sub-genres separately, most shows first', () => {
+    expect(genreOptions(events, today)).toEqual({
+      genres: [
+        { name: 'Rock', count: 2 },
+        { name: 'Pop', count: 1 },
+      ],
+      subGenres: [
+        { name: 'Emo', count: 1 },
+        { name: 'K-Pop', count: 1 },
+        { name: 'Punk', count: 1 },
+      ],
+    });
+  });
+
+  it('counts genres within the date range, ignoring the genre choice', () => {
+    const options = genreOptions(events, today, { genre: 'Pop', from: '2026-12-02', to: '2026-12-02' });
+    expect(options.genres).toEqual([{ name: 'Rock', count: 1 }]);
+    expect(options.subGenres).toEqual([{ name: 'Emo', count: 1 }]);
   });
 
   it('searches genres and sub-genres, best match first', () => {

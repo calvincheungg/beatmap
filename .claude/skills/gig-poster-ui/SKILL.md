@@ -66,6 +66,7 @@ Rules:
 - **Date = ticket stub.** Perforated edge (dashed border or notches), big day number, small month.
 - **Status stamps.** Rotated rubber-stamp badges with rough edges: "TONIGHT", "FREE", "SOLD OUT", "ALL AGES". Use riso-red or riso-yellow, multiply blend.
 - **Buttons.** Rectangular, thick ink border, hard offset shadow. On press, the button shifts into its shadow (translate by the shadow offset, shadow to 0).
+- **Dropdowns.** Custom lists in the same style as search results, not native selects, whose open list can't be styled. A filter that's on uses a riso-yellow button.
 - **Inputs.** Look like a form on a photocopied page: ink underline or box, typewriter font, no glow focus ring. Focus state: thick accent outline that is clearly visible.
 - **Side panel / bottom sheet.** A poster pinned to the wall: paper background, torn or zig-zag top edge, push-pin or tape at the top.
 - **Icons.** Simple, bold, slightly rough line icons in ink. No glossy, gradient or emoji-style icons.

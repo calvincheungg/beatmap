@@ -1,5 +1,6 @@
 import { create } from 'zustand';
-import type { ShowEvent } from '../data/events';
+import { ANY_DATE, dateRangeFor, type DateFilter } from '../data/dateFilter';
+import type { ShowEvent, ShowFilter } from '../data/events';
 import type { Neighbourhood } from '../data/neighbourhoods';
 import type { Venue } from '../data/venues';
 import { theme } from '../theme';
@@ -30,6 +31,7 @@ interface MapState {
   eventsLoaded: boolean;
   /** The genre filter. Null shows everything. */
   selectedGenre: string | null;
+  dateFilter: DateFilter;
   rotate: (steps: number) => void;
   toggleFlat: () => void;
   toggleLabels: () => void;
@@ -41,6 +43,7 @@ interface MapState {
   setLoadState: (loadState: LoadState) => void;
   setEvents: (events: ShowEvent[] | null) => void;
   setGenre: (genre: string | null) => void;
+  setDateFilter: (dateFilter: DateFilter) => void;
 }
 
 export const useMapStore = create<MapState>()((set) => ({
@@ -55,6 +58,7 @@ export const useMapStore = create<MapState>()((set) => ({
   events: [],
   eventsLoaded: false,
   selectedGenre: null,
+  dateFilter: ANY_DATE,
   rotate: (steps) => set((state) => ({ rotationSteps: state.rotationSteps + steps })),
   toggleFlat: () => set((state) => ({ flat: !state.flat })),
   toggleLabels: () => set((state) => ({ showLabels: !state.showLabels })),
@@ -71,4 +75,10 @@ export const useMapStore = create<MapState>()((set) => ({
   setLoadState: (loadState) => set({ loadState }),
   setEvents: (events) => set({ events, eventsLoaded: true }),
   setGenre: (selectedGenre) => set({ selectedGenre }),
+  setDateFilter: (dateFilter) => set({ dateFilter }),
 }));
+
+/** Turns the genre and date choices into the filter applied to listings. */
+export function showFilterFrom(genre: string | null, dateFilter: DateFilter, today: string): ShowFilter {
+  return { genre, ...dateRangeFor(dateFilter, today) };
+}
