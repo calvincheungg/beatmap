@@ -11,6 +11,7 @@ describe('mapStore', () => {
       flyRequest: null,
       selectedNeighbourhoodId: null,
       selectedVenueId: null,
+      highlightedShowId: null,
       hoveredVenueId: null,
       loadState: 'loading',
       events: [],
@@ -45,6 +46,51 @@ describe('mapStore', () => {
   it('builds the listings filter from the genre and date choices', () => {
     expect(showFilterFrom('Rock', { preset: 'week', from: null, to: null }, '2026-11-06')).toEqual({ genre: 'Rock', from: '2026-11-06', to: '2026-11-12' });
     expect(showFilterFrom(null, ANY_DATE, '2026-11-06')).toEqual({ genre: null, from: null, to: null });
+  });
+
+  describe('selectShow', () => {
+    const venue = {
+      id: 'v',
+      name: 'V',
+      lat: 43.7,
+      lon: -79.4,
+      neighbourhood: 'area',
+      neighbourhoodName: 'Area',
+      address: '',
+      website: null,
+      capacity: null,
+      sizeTier: 'small',
+      indoorOutdoor: 'indoor',
+      status: 'listed',
+    };
+    const show = {
+      id: 's',
+      name: 'S',
+      date: '2026-12-01',
+      time: null,
+      status: 'onsale',
+      url: 'https://x.ca',
+      venueId: 'v',
+      genre: 'Rock',
+      subGenre: null,
+      artists: [],
+    };
+
+    it('opens the venue and marks the show', () => {
+      useMapStore.getState().selectShow(show, venue, '2026-11-06');
+      expect(useMapStore.getState()).toMatchObject({ selectedVenueId: 'v', selectedNeighbourhoodId: 'area', highlightedShowId: 's' });
+      expect(useMapStore.getState().flyRequest).toMatchObject({ lat: 43.7, lon: -79.4 });
+    });
+
+    it('clears filters that would hide the show, and keeps ones that would not', () => {
+      useMapStore.setState({ selectedGenre: 'Jazz', dateFilter: { preset: 'week', from: null, to: null } });
+      useMapStore.getState().selectShow(show, venue, '2026-11-06');
+      expect(useMapStore.getState()).toMatchObject({ selectedGenre: null, dateFilter: ANY_DATE });
+
+      useMapStore.setState({ selectedGenre: 'Rock' });
+      useMapStore.getState().selectShow(show, venue, '2026-11-06');
+      expect(useMapStore.getState().selectedGenre).toBe('Rock');
+    });
   });
 
   it('records loaded events and failed loads', () => {

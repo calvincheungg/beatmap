@@ -73,6 +73,7 @@ export async function syncEvents(events: ShowEvent[], runStart: Date, config: St
       url: event.url,
       genre: event.genre,
       sub_genre: event.subGenre,
+      artists: event.artists,
       fetched_at: fetchedAt,
     }));
     await check(

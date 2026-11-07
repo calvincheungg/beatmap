@@ -67,7 +67,10 @@ describe('toShowEvents', () => {
     url: `https://www.ticketmaster.ca/event/${id}`,
     dates: { start: { localDate: '2026-12-01', localTime: '20:00:00' }, status: { code: 'onsale' } },
     classifications: [{ primary: true, genre: { name: 'Rock' }, subGenre: { name: 'Hardcore Punk' } }],
-    _embedded: { venues: [{ name: 'Horseshoe Tavern', location: at(43.649, -79.3959) }] },
+    _embedded: {
+      venues: [{ name: 'Horseshoe Tavern', location: at(43.649, -79.3959) }],
+      attractions: [{ name: 'Headliner' }, { name: ' Support Act ' }, { name: 'Headliner' }, {}],
+    },
     ...overrides,
   });
 
@@ -87,6 +90,7 @@ describe('toShowEvents', () => {
         venueId: 'horseshoe',
         genre: 'Rock',
         subGenre: 'Hardcore Punk',
+        artists: ['Headliner', 'Support Act'],
       },
     ]);
     expect(report.matchedCounts.get('horseshoe')).toBe(1);
@@ -127,6 +131,11 @@ describe('toShowEvents', () => {
     );
     const genres = Object.fromEntries(report.events.map((show) => [show.id, [show.genre, show.subGenre]]));
     expect(genres).toEqual({ primary: ['Pop', 'K-Pop'], vague: [null, null], repeat: ['Jazz', null], none: [null, null], amapiano: ['Dance/Electronic', null], urban: ['Hip-Hop/Rap', null] });
+  });
+
+  it('allows shows with no artists listed', () => {
+    const show = event('solo', { _embedded: { venues: [{ name: 'Horseshoe Tavern', location: at(43.649, -79.3959) }] } });
+    expect(toShowEvents([show], venues).events[0]?.artists).toEqual([]);
   });
 
   it('sorts by date and time', () => {

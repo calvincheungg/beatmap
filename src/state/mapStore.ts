@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { ANY_DATE, dateRangeFor, type DateFilter } from '../data/dateFilter';
-import type { ShowEvent, ShowFilter } from '../data/events';
+import { matchesFilter, type ShowEvent, type ShowFilter } from '../data/events';
 import type { Neighbourhood } from '../data/neighbourhoods';
 import type { Venue } from '../data/venues';
 import { theme } from '../theme';
@@ -24,6 +24,8 @@ interface MapState {
   /** The neighbourhood shown in the side panel. The panel is closed when null. */
   selectedNeighbourhoodId: string | null;
   selectedVenueId: string | null;
+  /** A show picked in search, marked in the side panel. */
+  highlightedShowId: string | null;
   hoveredVenueId: string | null;
   loadState: LoadState;
   /** Upcoming shows. Empty until loaded, and null if the listings couldn't be loaded. */
@@ -38,6 +40,8 @@ interface MapState {
   selectNeighbourhood: (neighbourhood: Neighbourhood) => void;
   /** Opens the panel on a venue. Flying is optional, because a clicked pin is already in view. */
   selectVenue: (venue: Venue, options?: { fly: boolean }) => void;
+  /** Opens a searched show's venue, clearing any filters that would hide it. */
+  selectShow: (show: ShowEvent, venue: Venue, today: string) => void;
   setHoveredVenue: (id: string | null) => void;
   closePanel: () => void;
   setLoadState: (loadState: LoadState) => void;
@@ -53,6 +57,7 @@ export const useMapStore = create<MapState>()((set) => ({
   flyRequest: null,
   selectedNeighbourhoodId: null,
   selectedVenueId: null,
+  highlightedShowId: null,
   hoveredVenueId: null,
   loadState: 'loading',
   events: [],
@@ -63,15 +68,27 @@ export const useMapStore = create<MapState>()((set) => ({
   toggleFlat: () => set((state) => ({ flat: !state.flat })),
   toggleLabels: () => set((state) => ({ showLabels: !state.showLabels })),
   selectNeighbourhood: ({ id, lat, lon, zoom }) =>
-    set({ selectedNeighbourhoodId: id, selectedVenueId: null, flyRequest: { lat, lon, zoom } }),
+    set({ selectedNeighbourhoodId: id, selectedVenueId: null, highlightedShowId: null, flyRequest: { lat, lon, zoom } }),
   selectVenue: ({ id, lat, lon, neighbourhood }, { fly } = { fly: true }) =>
     set((state) => ({
       selectedVenueId: id,
       selectedNeighbourhoodId: neighbourhood,
+      highlightedShowId: null,
       flyRequest: fly ? { lat, lon, zoom: theme.camera.venueZoom } : state.flyRequest,
     })),
+  selectShow: (show, venue, today) =>
+    set((state) => {
+      const hidden = !matchesFilter(show, showFilterFrom(state.selectedGenre, state.dateFilter, today));
+      return {
+        selectedVenueId: venue.id,
+        selectedNeighbourhoodId: venue.neighbourhood,
+        highlightedShowId: show.id,
+        flyRequest: { lat: venue.lat, lon: venue.lon, zoom: theme.camera.venueZoom },
+        ...(hidden ? { selectedGenre: null, dateFilter: ANY_DATE } : {}),
+      };
+    }),
   setHoveredVenue: (id) => set({ hoveredVenueId: id }),
-  closePanel: () => set({ selectedNeighbourhoodId: null, selectedVenueId: null }),
+  closePanel: () => set({ selectedNeighbourhoodId: null, selectedVenueId: null, highlightedShowId: null }),
   setLoadState: (loadState) => set({ loadState }),
   setEvents: (events) => set({ events, eventsLoaded: true }),
   setGenre: (selectedGenre) => set({ selectedGenre }),

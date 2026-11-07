@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { MAP_BOUNDS } from '../src/config';
 import { parseCsv, toCsv } from '../src/data/csv';
 import { neighbourhoods, searchNeighbourhoods, withVenueNeighbourhoods } from '../src/data/neighbourhoods';
-import { parseVenues, safeWebsite, venues, venuesIn } from '../src/data/venues';
+import { parseVenues, safeWebsite, searchVenues, venues, venuesIn } from '../src/data/venues';
 
 const inBounds = ({ lat, lon }: { lat: number; lon: number }) =>
   lat >= MAP_BOUNDS.south && lat <= MAP_BOUNDS.north && lon >= MAP_BOUNDS.west && lon <= MAP_BOUNDS.east;
@@ -140,6 +140,10 @@ describe('the real venue list', () => {
     expect(venues.some((venue) => venue.id === 'massey-hall' && venue.website)).toBe(true);
   });
 
+  it('only has venues inside the map boundary', () => {
+    for (const venue of venues) expect(inBounds(venue), venue.name).toBe(true);
+  });
+
   it('has no duplicate venues', () => {
     expect(new Set(venues.map((venue) => venue.id)).size).toBe(venues.length);
   });
@@ -147,5 +151,24 @@ describe('the real venue list', () => {
   it('gives every venue a neighbourhood that opens in the panel', () => {
     const ids = new Set(neighbourhoods.map((area) => area.id));
     for (const venue of venues) expect(ids.has(venue.neighbourhood), venue.name).toBe(true);
+  });
+});
+
+describe('searchVenues', () => {
+  it('finds venues by part of their name, ignoring case and a leading "the"', () => {
+    expect(searchVenues('horseshoe').map((venue) => venue.name)).toContain('Horseshoe Tavern');
+    expect(searchVenues('MASSEY').map((venue) => venue.name)).toContain('Massey Hall');
+    expect(searchVenues('the rex').map((venue) => venue.name)).toContain('The Rex Hotel Jazz & Blues Bar');
+    expect(searchVenues('standard time').map((venue) => venue.name)).toEqual(['Standard Time']);
+  });
+
+  it('puts names starting with the search first', () => {
+    const list = parseVenues('name,neighbourhood,lat,lon\nBig Rex Room,A,43.6,-79.4\nRex Club,A,43.6,-79.4\n');
+    expect(searchVenues('rex', list).map((venue) => venue.name)).toEqual(['Rex Club', 'Big Rex Room']);
+  });
+
+  it('needs two letters, and limits results', () => {
+    expect(searchVenues('m')).toEqual([]);
+    expect(searchVenues('the', venues, 2).length).toBeLessThanOrEqual(2);
   });
 });

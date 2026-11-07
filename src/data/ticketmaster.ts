@@ -69,7 +69,7 @@ export interface ApiEvent {
     start?: { localDate?: string; localTime?: unknown };
     status?: { code?: string };
   };
-  _embedded?: { venues?: ApiVenue[] };
+  _embedded?: { venues?: ApiVenue[]; attractions?: { name?: string }[] };
 }
 
 interface ApiResponse {
@@ -197,6 +197,8 @@ export interface ShowEvent {
   /** Null when Ticketmaster gives only a placeholder like "Other". */
   genre: string | null;
   subGenre: string | null;
+  /** Everyone on the bill, including support acts the title often leaves out. */
+  artists: string[];
 }
 
 /** Labels too vague to filter by. */
@@ -264,6 +266,7 @@ export function toShowEvents<T extends MatchableVenue>(apiEvents: ApiEvent[], ve
       url: event.url,
       venueId: venue.id,
       ...primaryGenres(event),
+      artists: [...new Set((event._embedded?.attractions ?? []).map((artist) => artist.name?.trim()).filter((name) => !!name))] as string[],
     });
   }
   events.sort((a, b) => `${a.date} ${a.time ?? ''}`.localeCompare(`${b.date} ${b.time ?? ''}`));

@@ -1,6 +1,7 @@
 import { LngLatBounds, Marker, type GeoJSONSource, type Map as MapLibreMap, type MapMouseEvent } from 'maplibre-gl';
 import { isFiltering, todayString, venuesWithShows } from '../data/events';
 import { venues } from '../data/venues';
+import { MAX_PIN_SLOT, pinSlots } from '../map/pinLayout';
 import { showFilterFrom, useMapStore } from '../state/mapStore';
 import { theme, toCssColor } from '../theme';
 
@@ -14,6 +15,18 @@ const HOVER_LAYER = 'venue-pins-hover';
 const SELECTED_LAYER = 'venue-pins-selected';
 /** Pin images are drawn at twice their display size, so they stay sharp on high density screens. */
 const IMAGE_SCALE = 2;
+/** How far one slot moves a pin sideways, in pixels: half a pin's width plus a small gap. */
+const SLOT_PIXELS = 13;
+
+/** Layers can't read a list from a feature reliably, so each slot number maps to its offset here. */
+function slotOffsets(): unknown[] {
+  const cases: unknown[] = ['match', ['get', 'slot']];
+  for (let slot = -MAX_PIN_SLOT; slot <= MAX_PIN_SLOT; slot++) {
+    if (slot !== 0) cases.push(slot, ['literal', [slot * SLOT_PIXELS, 0]]);
+  }
+  cases.push(['literal', [0, 0]]);
+  return cases;
+}
 
 /** A push-pin: a round head on a tapered stem, with an ink outline. */
 function drawPin(color: number): ImageData {
@@ -58,19 +71,21 @@ export function addVenueLayer(map: MapLibreMap): () => void {
   map.addImage('pin-selected', drawPin(pins.selectedColor), { pixelRatio: IMAGE_SCALE });
 
   /** Every pin stays red until listings load, or if they can't load. */
-  const pinData = (only?: Set<string>) => {
+  const pinData = (features: typeof venues, slots: Map<string, number>) => {
     const { events, eventsLoaded } = useMapStore.getState();
     const withShows = venuesWithShows(events ?? [], todayString());
     return {
       type: 'FeatureCollection' as const,
-      features: venues.filter(({ id }) => !only || only.has(id)).map(({ id, name, lat, lon }) => ({
+      features: features.map(({ id, name, lat, lon }) => ({
         type: 'Feature' as const,
-        properties: { id, name, quiet: eventsLoaded && events !== null && !withShows.has(id) },
+        properties: { id, name, slot: slots.get(id) ?? 0, quiet: eventsLoaded && events !== null && !withShows.has(id) },
         geometry: { type: 'Point' as const, coordinates: [lon, lat] },
       })),
     };
   };
-  const data = pinData();
+  // Slots follow what's on the map, so a pin moves back to the middle when a filter hides its neighbour.
+  let slots = pinSlots(venues);
+  const data = pinData(venues, slots);
 
   /** With a filter on, only matching venues appear, so cluster numbers stay accurate. */
   const filteredVenues = () => {
@@ -148,6 +163,7 @@ export function addVenueLayer(map: MapLibreMap): () => void {
         'icon-image': id === BASE_LAYER ? ['case', ['get', 'quiet'], 'pin-quiet', 'pin'] : image,
         'icon-size': size,
         'icon-anchor': 'bottom',
+        'icon-offset': slotOffsets() as never,
         'icon-allow-overlap': true,
         'icon-ignore-placement': true,
         'icon-pitch-alignment': 'viewport',
@@ -211,11 +227,16 @@ export function addVenueLayer(map: MapLibreMap): () => void {
     const matchId = (id: string | null) => ['==', ['get', 'id'], id ?? ''] as ['==', ['get', string], string];
     map.setFilter(HOVER_LAYER, matchId(hoveredVenueId));
     map.setFilter(SELECTED_LAYER, matchId(selectedVenueId));
+    // The larger selected pin sits further out, so the regular one would peek out from behind it.
+    map.setFilter(BASE_LAYER, ['all', ['!', ['has', 'point_count']], ['!=', ['get', 'id'], selectedVenueId ?? '']]);
     updateCursor();
 
     const shown = venues.find((venue) => venue.id === (hoveredVenueId ?? selectedVenueId));
     if (shown) {
       labelElement.textContent = shown.name;
+      // Icon offsets grow with the icon, and hovered and selected pins are larger.
+      const x = (slots.get(shown.id) ?? 0) * SLOT_PIXELS * pins.activeScale;
+      label.setOffset([x, -(pins.heightPixels * pins.activeScale + pins.labelGap)]);
       label.setLngLat([shown.lon, shown.lat]).addTo(map);
     } else {
       label.remove();
@@ -227,8 +248,11 @@ export function addVenueLayer(map: MapLibreMap): () => void {
     const filterChanged = state.selectedGenre !== previous.selectedGenre || state.dateFilter !== previous.dateFilter;
     if (state.events !== previous.events || filterChanged) {
       const only = filteredVenues();
-      (map.getSource(SOURCE) as GeoJSONSource).setData(pinData(only));
-      (map.getSource(ACTIVE_SOURCE) as GeoJSONSource).setData(pinData());
+      const shown = only ? venues.filter(({ id }) => only.has(id)) : venues;
+      slots = pinSlots(shown);
+      (map.getSource(SOURCE) as GeoJSONSource).setData(pinData(shown, slots));
+      (map.getSource(ACTIVE_SOURCE) as GeoJSONSource).setData(pinData(venues, slots));
+      applySelection();
       if (only && filterChanged) showMatchingVenues(only);
     }
     if (state.hoveredVenueId !== previous.hoveredVenueId || state.selectedVenueId !== previous.selectedVenueId) {

@@ -286,6 +286,11 @@ body {
   cursor: pointer;
 }
 
+#search .result-detail {
+  display: block;
+  font-size: var(--font-size-small);
+}
+
 #search .result-type {
   font-size: var(--font-size-small);
   font-weight: 700;
@@ -416,6 +421,11 @@ body {
   align-items: flex-start;
   padding: var(--spacing) 0;
   border-top: var(--border-width) solid var(--color-border);
+}
+
+.show-list li.is-highlighted {
+  padding-inline: var(--spacing);
+  background: var(--color-tape);
 }
 
 .show-list a {

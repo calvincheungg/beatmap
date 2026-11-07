@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  artistsNotInTitle,
   formatShowDate,
   formatShowTime,
   genreOptions,
@@ -9,6 +10,7 @@ import {
   matchingShows,
   parseEventRows,
   searchGenres,
+  searchShows,
   showStatusLabel,
   todayString,
   upcomingShows,
@@ -26,6 +28,7 @@ const show = (id: string, venueId: string, date: string, genre: string | null = 
   venueId,
   genre,
   subGenre,
+  artists: [],
 });
 
 const row = (id: string, overrides: Record<string, unknown> = {}) => ({
@@ -39,6 +42,7 @@ const row = (id: string, overrides: Record<string, unknown> = {}) => ({
   url: `https://www.ticketmaster.ca/event/${id}`,
   genre: 'Rock',
   sub_genre: 'Punk',
+  artists: ['A Band'],
   ...overrides,
 });
 
@@ -55,6 +59,7 @@ describe('parseEventRows', () => {
         venueId: 'v',
         genre: 'Rock',
         subGenre: 'Punk',
+        artists: ['A Band'],
       },
     ]);
   });
@@ -201,6 +206,45 @@ describe('genres', () => {
     expect(searchGenres('POP', events, today).map((item) => item.name)).toEqual(['Pop', 'K-Pop']);
     expect(searchGenres('', events, today)).toEqual([]);
     expect(searchGenres('polka', events, today)).toEqual([]);
+  });
+});
+
+describe('searchShows', () => {
+  const today = '2026-11-06';
+  const tribute: ShowEvent = { ...show('tribute', 'v', '2026-12-05'), name: 'Everybody Knows Leonard Cohen', artists: ['Feist', 'Rufus Wainwright'] };
+  const bjork: ShowEvent = { ...show('bjork', 'w', '2026-12-01'), name: 'An Evening', artists: ['Björk'] };
+  const past: ShowEvent = { ...show('past', 'v', '2026-11-01'), name: 'Old Feist Show', artists: ['Feist'] };
+  const titled: ShowEvent = { ...show('titled', 'w', '2026-11-20'), name: 'Dead Tired w/ Single Wound', artists: [] };
+  const events = [past, titled, bjork, tribute];
+
+  it('finds support acts that are not in the title, naming the artist', () => {
+    expect(searchShows('feist', events, today)).toEqual([{ show: tribute, artist: 'Feist' }]);
+  });
+
+  it('finds shows with no artist list by their title', () => {
+    expect(searchShows('single wound', events, today)).toEqual([{ show: titled, artist: null }]);
+  });
+
+  it('ignores case and accents, and skips past shows', () => {
+    expect(searchShows('BJORK', events, today)[0]?.artist).toBe('Björk');
+    expect(searchShows('old feist', events, today)).toEqual([]);
+  });
+
+  it('needs two letters', () => {
+    expect(searchShows('f', events, today)).toEqual([]);
+    expect(searchShows('  ', events, today)).toEqual([]);
+  });
+
+  it('puts names starting with the search first, then the soonest, up to the limit', () => {
+    const a: ShowEvent = { ...show('a', 'v', '2026-11-10'), name: 'The Rock Band' };
+    const b: ShowEvent = { ...show('b', 'v', '2026-12-10'), name: 'Rock Night' };
+    const c: ShowEvent = { ...show('c', 'v', '2026-12-20'), name: 'Rock Party' };
+    expect(searchShows('rock', [a, b, c], today).map((match) => match.show.id)).toEqual(['b', 'c', 'a']);
+    expect(searchShows('rock', [a, b, c], today, 1)).toHaveLength(1);
+  });
+
+  it('lists only artists missing from the title', () => {
+    expect(artistsNotInTitle({ ...tribute, artists: ['Feist', 'Leonard Cohen'] })).toEqual(['Feist']);
   });
 });
 

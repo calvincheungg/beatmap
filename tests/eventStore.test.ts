@@ -12,6 +12,7 @@ const event = (id: string): ShowEvent => ({
   venueId: 'v',
   genre: 'Rock',
   subGenre: null,
+  artists: ['A'],
 });
 
 interface Call {
@@ -86,6 +87,7 @@ describe('syncEvents', () => {
         url: 'https://www.ticketmaster.ca/x',
         genre: 'Rock',
         sub_genre: null,
+        artists: ['A'],
         fetched_at: '2026-11-06T18:00:00.000Z',
       },
     ]);

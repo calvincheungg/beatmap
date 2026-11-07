@@ -1,3 +1,4 @@
+import { MIN_SEARCH_LENGTH, normalizeForSearch } from './search.ts';
 import type { ShowEvent } from './ticketmaster.ts';
 
 export type { ShowEvent };
@@ -22,6 +23,7 @@ export function parseEventRows(rows: unknown): ShowEvent[] {
       venue_id: venueId,
       genre,
       sub_genre: subGenre,
+      artists,
     } = row;
     if (
       typeof source !== 'string' ||
@@ -46,6 +48,7 @@ export function parseEventRows(rows: unknown): ShowEvent[] {
         venueId,
         genre: typeof genre === 'string' ? genre : null,
         subGenre: typeof subGenre === 'string' ? subGenre : null,
+        artists: Array.isArray(artists) ? artists.filter((artist): artist is string => typeof artist === 'string') : [],
       },
     ];
   });
@@ -66,7 +69,7 @@ export async function loadEvents(
   try {
     for (let page = 0; page < MAX_PAGES; page++) {
       const params = new URLSearchParams({
-        select: 'source,source_id,venue_id,name,local_date,local_time,status,url,genre,sub_genre',
+        select: 'source,source_id,venue_id,name,local_date,local_time,status,url,genre,sub_genre,artists',
         timing: 'eq.upcoming',
         order: 'local_date.asc,local_time.asc,source_id.asc',
         limit: String(PAGE_SIZE),
@@ -160,6 +163,37 @@ export function searchGenres(query: string, events: ShowEvent[], today: string, 
   return [...genres, ...subGenres]
     .filter((item) => item.name.toLowerCase().includes(wanted))
     .sort((a, b) => startsWith(a) - startsWith(b) || b.count - a.count);
+}
+
+const MAX_SHOW_RESULTS = 8;
+
+export interface ShowMatch {
+  show: ShowEvent;
+  /** The artist that matched, or null if the show's title did. */
+  artist: string | null;
+}
+
+/** Upcoming shows by artist or title, regardless of filters. Names starting with the search come first, then soonest. */
+export function searchShows(query: string, events: ShowEvent[], today: string, limit = MAX_SHOW_RESULTS): ShowMatch[] {
+  const wanted = normalizeForSearch(query);
+  if (wanted.length < MIN_SEARCH_LENGTH) return [];
+  const ranked: { match: ShowMatch; rank: number }[] = [];
+  for (const show of events) {
+    if (show.date < today) continue;
+    const artist = show.artists.find((name) => normalizeForSearch(name).includes(wanted)) ?? null;
+    const title = normalizeForSearch(show.name);
+    if (!artist && !title.includes(wanted)) continue;
+    const startsWith = artist ? normalizeForSearch(artist).startsWith(wanted) : title.startsWith(wanted);
+    ranked.push({ match: { show, artist }, rank: startsWith ? 0 : 1 });
+  }
+  // Events are already in date order, and this sort keeps that order within each rank.
+  return ranked.sort((a, b) => a.rank - b.rank).slice(0, limit).map((item) => item.match);
+}
+
+/** Artists on the bill that the show's title doesn't mention. */
+export function artistsNotInTitle(show: ShowEvent): string[] {
+  const title = normalizeForSearch(show.name);
+  return show.artists.filter((artist) => !title.includes(normalizeForSearch(artist)));
 }
 
 /** Formats 2026-12-04 as "Fri, Dec 4". Dates are built locally, so they can't shift a day across time zones. */
