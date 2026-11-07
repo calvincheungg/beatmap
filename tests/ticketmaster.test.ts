@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  cleanGenre,
   encodeGeohash,
   fetchMusicEvents,
   matchVenue,
@@ -65,6 +66,7 @@ describe('toShowEvents', () => {
     name: `Show ${id}`,
     url: `https://www.ticketmaster.ca/event/${id}`,
     dates: { start: { localDate: '2026-12-01', localTime: '20:00:00' }, status: { code: 'onsale' } },
+    classifications: [{ primary: true, genre: { name: 'Rock' }, subGenre: { name: 'Hardcore Punk' } }],
     _embedded: { venues: [{ name: 'Horseshoe Tavern', location: at(43.649, -79.3959) }] },
     ...overrides,
   });
@@ -83,6 +85,8 @@ describe('toShowEvents', () => {
         status: 'onsale',
         url: 'https://www.ticketmaster.ca/event/a',
         venueId: 'horseshoe',
+        genre: 'Rock',
+        subGenre: 'Hardcore Punk',
       },
     ]);
     expect(report.matchedCounts.get('horseshoe')).toBe(1);
@@ -104,11 +108,40 @@ describe('toShowEvents', () => {
     expect(report.events[0]?.time).toBeNull();
   });
 
+  it('uses the primary genre and removes placeholders and repeats', () => {
+    const report = toShowEvents(
+      [
+        event('primary', {
+          classifications: [
+            { primary: false, genre: { name: 'Jazz' } },
+            { primary: true, genre: { name: 'Pop' }, subGenre: { name: 'K-Pop' } },
+          ],
+        }),
+        event('vague', { classifications: [{ primary: true, genre: { name: 'Other' }, subGenre: { name: 'undefined' } }] }),
+        event('repeat', { classifications: [{ genre: { name: 'Jazz' }, subGenre: { name: 'Jazz' } }] }),
+        event('none', { classifications: [] }),
+      ],
+      venues,
+    );
+    const genres = Object.fromEntries(report.events.map((show) => [show.id, [show.genre, show.subGenre]]));
+    expect(genres).toEqual({ primary: ['Pop', 'K-Pop'], vague: [null, null], repeat: ['Jazz', null], none: [null, null] });
+  });
+
   it('sorts by date and time', () => {
     const later = event('later', { dates: { start: { localDate: '2026-12-09', localTime: '19:00:00' } } });
     const late = event('late', { dates: { start: { localDate: '2026-12-01', localTime: '22:00:00' } } });
     const early = event('early', { dates: { start: { localDate: '2026-12-01', localTime: '19:00:00' } } });
     expect(toShowEvents([later, late, early], venues).events.map((show) => show.id)).toEqual(['early', 'late', 'later']);
+  });
+});
+
+describe('cleanGenre', () => {
+  it('removes placeholders and merges aliases', () => {
+    expect(cleanGenre('Undefined')).toBeNull();
+    expect(cleanGenre('Music')).toBeNull();
+    expect(cleanGenre(undefined)).toBeNull();
+    expect(cleanGenre('Dance')).toBe('Dance/Electronic');
+    expect(cleanGenre(' Rock ')).toBe('Rock');
   });
 });
 

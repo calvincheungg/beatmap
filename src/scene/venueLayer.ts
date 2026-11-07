@@ -1,5 +1,5 @@
-import { Marker, type GeoJSONSource, type Map as MapLibreMap, type MapMouseEvent } from 'maplibre-gl';
-import { todayString } from '../data/events';
+import { LngLatBounds, Marker, type GeoJSONSource, type Map as MapLibreMap, type MapMouseEvent } from 'maplibre-gl';
+import { todayString, venuesWithShows } from '../data/events';
 import { venues } from '../data/venues';
 import { useMapStore } from '../state/mapStore';
 import { theme, toCssColor } from '../theme';
@@ -58,12 +58,12 @@ export function addVenueLayer(map: MapLibreMap): () => void {
   map.addImage('pin-selected', drawPin(pins.selectedColor), { pixelRatio: IMAGE_SCALE });
 
   /** Every pin stays red until listings load, or if they can't load. */
-  const pinData = () => {
+  const pinData = (only?: Set<string>) => {
     const { events, eventsLoaded } = useMapStore.getState();
-    const withShows = new Set((events ?? []).filter((event) => event.date >= todayString()).map((event) => event.venueId));
+    const withShows = venuesWithShows(events ?? [], todayString());
     return {
       type: 'FeatureCollection' as const,
-      features: venues.map(({ id, name, lat, lon }) => ({
+      features: venues.filter(({ id }) => !only || only.has(id)).map(({ id, name, lat, lon }) => ({
         type: 'Feature' as const,
         properties: { id, name, quiet: eventsLoaded && events !== null && !withShows.has(id) },
         geometry: { type: 'Point' as const, coordinates: [lon, lat] },
@@ -71,6 +71,27 @@ export function addVenueLayer(map: MapLibreMap): () => void {
     };
   };
   const data = pinData();
+
+  /** With a genre filter on, only matching venues appear, so cluster numbers stay accurate. */
+  const genreVenues = () => {
+    const { events, selectedGenre } = useMapStore.getState();
+    return selectedGenre && events ? venuesWithShows(events, todayString(), selectedGenre) : undefined;
+  };
+
+  const showMatchingVenues = (only: Set<string>) => {
+    const matches = venues.filter(({ id }) => only.has(id));
+    const [first] = matches;
+    if (!first) return;
+    const bounds = new LngLatBounds([first.lon, first.lat], [first.lon, first.lat]);
+    for (const { lat, lon } of matches) bounds.extend([lon, lat]);
+    map.fitBounds(bounds, {
+      padding: pins.fitPadding,
+      maxZoom: pins.fitMaxZoom,
+      bearing: map.getBearing(),
+      pitch: map.getPitch(),
+      duration: theme.camera.flyDuration,
+    });
+  };
   map.addSource(SOURCE, {
     type: 'geojson',
     data,
@@ -201,10 +222,11 @@ export function addVenueLayer(map: MapLibreMap): () => void {
   applySelection();
 
   const stopListening = useMapStore.subscribe((state, previous) => {
-    if (state.events !== previous.events) {
-      const updated = pinData();
-      (map.getSource(SOURCE) as GeoJSONSource).setData(updated);
-      (map.getSource(ACTIVE_SOURCE) as GeoJSONSource).setData(updated);
+    if (state.events !== previous.events || state.selectedGenre !== previous.selectedGenre) {
+      const only = genreVenues();
+      (map.getSource(SOURCE) as GeoJSONSource).setData(pinData(only));
+      (map.getSource(ACTIVE_SOURCE) as GeoJSONSource).setData(pinData());
+      if (only && state.selectedGenre !== previous.selectedGenre) showMatchingVenues(only);
     }
     if (state.hoveredVenueId !== previous.hoveredVenueId || state.selectedVenueId !== previous.selectedVenueId) {
       applySelection();

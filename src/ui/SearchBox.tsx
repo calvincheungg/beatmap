@@ -1,18 +1,38 @@
 import { useState, type KeyboardEvent } from 'react';
+import { searchGenres, todayString } from '../data/events';
 import { searchNeighbourhoods, type Neighbourhood } from '../data/neighbourhoods';
 import { useMapStore } from '../state/mapStore';
 
-/** A search box that flies the map to a neighbourhood and opens its panel. */
+type Result = { type: 'area'; area: Neighbourhood } | { type: 'genre'; name: string; count: number };
+
+function resultId(result: Result): string {
+  return result.type === 'area' ? `search-area-${result.area.id}` : `search-genre-${result.name.replace(/\W+/g, '-')}`;
+}
+
+/** Searches neighbourhoods, which fly the map there, and genres, which set the filter. */
 export function SearchBox() {
   const selectNeighbourhood = useMapStore((state) => state.selectNeighbourhood);
+  const setGenre = useMapStore((state) => state.setGenre);
+  const events = useMapStore((state) => state.events);
   const [query, setQuery] = useState('');
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState(0);
-  const results = searchNeighbourhoods(query);
 
-  const choose = (area: Neighbourhood) => {
-    selectNeighbourhood(area);
-    setQuery(area.name);
+  const genres = searchGenres(query, events ?? [], todayString()).map(
+    (item): Result => ({ type: 'genre', ...item }),
+  );
+  const areas = searchNeighbourhoods(query).map((area): Result => ({ type: 'area', area }));
+  const results = [...genres, ...areas];
+  const activeResult = results[active];
+
+  const choose = (result: Result) => {
+    if (result.type === 'area') {
+      selectNeighbourhood(result.area);
+      setQuery(result.area.name);
+    } else {
+      setGenre(result.name);
+      setQuery('');
+    }
     setOpen(false);
   };
 
@@ -26,21 +46,20 @@ export function SearchBox() {
       setOpen(true);
       setActive((active + step + results.length) % results.length);
     } else if (event.key === 'Enter') {
-      const area = results[active];
-      if (open && area) choose(area);
+      if (open && activeResult) choose(activeResult);
     }
   };
 
   return (
-    <div id="search">
+    <>
       <input
         type="search"
         role="combobox"
-        aria-label="Search neighbourhoods"
+        aria-label="Search neighbourhoods and genres"
         aria-expanded={open}
         aria-controls="search-results"
-        aria-activedescendant={open && results[active] ? `search-${results[active].id}` : undefined}
-        placeholder="Search neighbourhoods"
+        aria-activedescendant={open && activeResult ? resultId(activeResult) : undefined}
+        placeholder="Search places or genres"
         value={query}
         onChange={(event) => {
           setQuery(event.target.value);
@@ -56,26 +75,37 @@ export function SearchBox() {
         onKeyDown={onKeyDown}
       />
       {open && (
-        <ul id="search-results" role="listbox" aria-label="Neighbourhoods">
-          {results.length === 0 && <li role="option" aria-selected="false" aria-disabled="true">No matches</li>}
-          {results.map((area, index) => (
+        <ul id="search-results" role="listbox" aria-label="Search results">
+          {results.length === 0 && (
+            <li role="option" aria-selected="false" aria-disabled="true">
+              No matches
+            </li>
+          )}
+          {results.map((result, index) => (
             <li
-              key={area.id}
-              id={`search-${area.id}`}
+              key={resultId(result)}
+              id={resultId(result)}
               role="option"
               aria-selected={index === active}
               // Runs before the input's blur closes the list.
               onMouseDown={(event) => {
                 event.preventDefault();
-                choose(area);
+                choose(result);
               }}
               onMouseEnter={() => setActive(index)}
             >
-              {area.name}
+              {result.type === 'area' ? (
+                result.area.name
+              ) : (
+                <>
+                  <span className="result-type">Genre: </span>
+                  {result.name} ({result.count})
+                </>
+              )}
             </li>
           ))}
         </ul>
       )}
-    </div>
+    </>
   );
 }

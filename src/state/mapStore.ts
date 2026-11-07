@@ -28,6 +28,8 @@ interface MapState {
   /** Upcoming shows. Empty until loaded, and null if the listings couldn't be loaded. */
   events: ShowEvent[] | null;
   eventsLoaded: boolean;
+  /** The genre filter. Null shows everything. */
+  selectedGenre: string | null;
   rotate: (steps: number) => void;
   toggleFlat: () => void;
   toggleLabels: () => void;
@@ -38,6 +40,7 @@ interface MapState {
   closePanel: () => void;
   setLoadState: (loadState: LoadState) => void;
   setEvents: (events: ShowEvent[] | null) => void;
+  setGenre: (genre: string | null) => void;
 }
 
 export const useMapStore = create<MapState>()((set) => ({
@@ -51,6 +54,7 @@ export const useMapStore = create<MapState>()((set) => ({
   loadState: 'loading',
   events: [],
   eventsLoaded: false,
+  selectedGenre: null,
   rotate: (steps) => set((state) => ({ rotationSteps: state.rotationSteps + steps })),
   toggleFlat: () => set((state) => ({ flat: !state.flat })),
   toggleLabels: () => set((state) => ({ showLabels: !state.showLabels })),
@@ -66,4 +70,5 @@ export const useMapStore = create<MapState>()((set) => ({
   closePanel: () => set({ selectedNeighbourhoodId: null, selectedVenueId: null }),
   setLoadState: (loadState) => set({ loadState }),
   setEvents: (events) => set({ events, eventsLoaded: true }),
+  setGenre: (selectedGenre) => set({ selectedGenre }),
 }));

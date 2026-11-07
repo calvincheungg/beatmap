@@ -16,6 +16,7 @@ export function SidePanel() {
   const selectVenue = useMapStore((state) => state.selectVenue);
   const closePanel = useMapStore((state) => state.closePanel);
   const events = useMapStore((state) => state.events);
+  const genre = useMapStore((state) => state.selectedGenre);
 
   const today = todayString();
   const area = findNeighbourhood(selectedId);
@@ -63,7 +64,7 @@ export function SidePanel() {
                   onClick={() => selectVenue(listed)}
                 >
                   {listed.name}
-                  {events && <ShowCount count={upcomingShows(events, listed.id, today).length} />}
+                  {events && <ShowCount count={upcomingShows(events, listed.id, today, genre).length} />}
                 </button>
               </li>
             ))}

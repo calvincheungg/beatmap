@@ -120,6 +120,9 @@ export const theme = {
     /** Space between a pin's top and its name label, in pixels. */
     labelGap: 4,
     /** Nearby pins merge into a numbered stamp until this zoom. */
+    /** Space around the pins and the most zoom when the map moves to show a genre's venues. */
+    fitPadding: 90,
+    fitMaxZoom: 14,
     clusterRadius: 44,
     clusterMaxZoom: 15,
     /** Stamp radius in pixels: small, then larger from these venue counts. */

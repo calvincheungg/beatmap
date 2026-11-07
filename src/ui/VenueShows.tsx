@@ -8,17 +8,20 @@ const INITIAL_SHOWS = 10;
 /** A venue's upcoming shows, with links to buy tickets. */
 export function VenueShows({ venueId }: { venueId: string }) {
   const events = useMapStore((state) => state.events);
+  const genre = useMapStore((state) => state.selectedGenre);
   const [showAll, setShowAll] = useState(false);
 
   if (events === null) return <p>Show listings aren't available right now.</p>;
 
-  const shows = upcomingShows(events, venueId, todayString());
-  if (shows.length === 0) return <p>No upcoming shows listed on Ticketmaster.</p>;
+  const shows = upcomingShows(events, venueId, todayString(), genre);
+  if (shows.length === 0) {
+    return <p>{genre ? `No upcoming ${genre} shows listed here.` : 'No upcoming shows listed on Ticketmaster.'}</p>;
+  }
   const visible = showAll ? shows : shows.slice(0, INITIAL_SHOWS);
 
   return (
     <section aria-label="Upcoming shows">
-      <h3>Upcoming shows</h3>
+      <h3>{genre ? `Upcoming ${genre} shows` : 'Upcoming shows'}</h3>
       <ul className="show-list">
         {visible.map((show) => {
           const time = formatShowTime(show.time);
@@ -30,6 +33,7 @@ export function VenueShows({ venueId }: { venueId: string }) {
                 {formatShowDate(show.date)}
                 {time ? ` · ${time}` : ''}
               </span>
+              {(show.subGenre ?? show.genre) && <span>{show.subGenre ?? show.genre}</span>}
               {status && <span className="show-status">{status}</span>}
               <a href={show.url} target="_blank" rel="noopener noreferrer">
                 Tickets

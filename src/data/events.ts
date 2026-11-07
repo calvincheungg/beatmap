@@ -11,7 +11,18 @@ const MAX_PAGES = 20;
 export function parseEventRows(rows: unknown): ShowEvent[] {
   if (!Array.isArray(rows)) throw new Error('Expected a list of events');
   return (rows as Record<string, unknown>[]).flatMap((row): ShowEvent[] => {
-    const { source, source_id: sourceId, name, local_date: date, local_time: time, status, url, venue_id: venueId } = row;
+    const {
+      source,
+      source_id: sourceId,
+      name,
+      local_date: date,
+      local_time: time,
+      status,
+      url,
+      venue_id: venueId,
+      genre,
+      sub_genre: subGenre,
+    } = row;
     if (
       typeof source !== 'string' ||
       typeof sourceId !== 'string' ||
@@ -33,6 +44,8 @@ export function parseEventRows(rows: unknown): ShowEvent[] {
         status: typeof status === 'string' ? status : 'unknown',
         url,
         venueId,
+        genre: typeof genre === 'string' ? genre : null,
+        subGenre: typeof subGenre === 'string' ? subGenre : null,
       },
     ];
   });
@@ -53,7 +66,7 @@ export async function loadEvents(
   try {
     for (let page = 0; page < MAX_PAGES; page++) {
       const params = new URLSearchParams({
-        select: 'source,source_id,venue_id,name,local_date,local_time,status,url',
+        select: 'source,source_id,venue_id,name,local_date,local_time,status,url,genre,sub_genre',
         timing: 'eq.upcoming',
         order: 'local_date.asc,local_time.asc,source_id.asc',
         limit: String(PAGE_SIZE),
@@ -78,9 +91,50 @@ export function todayString(now: Date = new Date()): string {
   return `${now.getFullYear()}-${month}-${day}`;
 }
 
-/** A venue's shows from today on, since the file can be a few days old. They're already in date order. */
-export function upcomingShows(events: ShowEvent[], venueId: string, today: string): ShowEvent[] {
-  return events.filter((event) => event.venueId === venueId && event.date >= today);
+/** True if a show fits the genre filter. A null filter matches everything. */
+export function matchesGenre(event: ShowEvent, genre: string | null): boolean {
+  return genre === null || event.genre === genre || event.subGenre === genre;
+}
+
+/** A venue's shows from today on, since a page can stay open for days. They're already in date order. */
+export function upcomingShows(events: ShowEvent[], venueId: string, today: string, genre: string | null = null): ShowEvent[] {
+  return events.filter((event) => event.venueId === venueId && event.date >= today && matchesGenre(event, genre));
+}
+
+/** The venues with at least one upcoming show that fits the genre filter. */
+export function venuesWithShows(events: ShowEvent[], today: string, genre: string | null = null): Set<string> {
+  return new Set(events.filter((event) => event.date >= today && matchesGenre(event, genre)).map((event) => event.venueId));
+}
+
+export interface GenreCount {
+  name: string;
+  count: number;
+}
+
+function countBy(names: (string | null)[]): GenreCount[] {
+  const counts = new Map<string, number>();
+  for (const name of names) if (name) counts.set(name, (counts.get(name) ?? 0) + 1);
+  return [...counts].map(([name, count]) => ({ name, count })).sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
+}
+
+/** Main genres with upcoming shows, most shows first. These fill the filter dropdown. */
+export function genreOptions(events: ShowEvent[], today: string): GenreCount[] {
+  return countBy(events.filter((event) => event.date >= today).map((event) => event.genre));
+}
+
+/** Genres and sub-genres matching a search, most shows first. An empty search finds nothing. */
+export function searchGenres(query: string, events: ShowEvent[], today: string): GenreCount[] {
+  const wanted = query.trim().toLowerCase();
+  if (!wanted) return [];
+  const upcoming = events.filter((event) => event.date >= today);
+  // Main genres count every show in them, so they take priority over a sub-genre of the same name.
+  const main = countBy(upcoming.map((event) => event.genre));
+  const mainNames = new Set(main.map((item) => item.name));
+  const sub = countBy(upcoming.map((event) => event.subGenre)).filter((item) => !mainNames.has(item.name));
+  const startsWith = (item: GenreCount) => (item.name.toLowerCase().startsWith(wanted) ? 0 : 1);
+  return [...main, ...sub]
+    .filter((item) => item.name.toLowerCase().includes(wanted))
+    .sort((a, b) => startsWith(a) - startsWith(b) || b.count - a.count);
 }
 
 /** Formats 2026-12-04 as "Fri, Dec 4". Dates are built locally, so they can't shift a day across time zones. */

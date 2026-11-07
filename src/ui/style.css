@@ -69,7 +69,40 @@ body {
   color: var(--color-text);
 }
 
+#search select {
+  width: 100%;
+  height: var(--control-size);
+  margin-top: var(--spacing);
+  padding: 0 var(--spacing);
+  border: var(--border-width) solid var(--color-border);
+  border-radius: 0;
+  background: var(--color-panel);
+  color: var(--color-text);
+  font-family: inherit;
+  font-size: var(--font-size);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+/* Beside the search box, so it never overlaps the side panel below it. */
+#genre-summary {
+  position: fixed;
+  top: var(--gutter);
+  left: calc(var(--gutter) * 2 + var(--panel-width));
+  max-width: calc(100% - var(--panel-width) - 3 * var(--gutter));
+  padding: var(--spacing);
+  border: var(--border-width) solid var(--color-border);
+  background: var(--color-tape);
+  color: var(--color-text);
+  font-weight: 700;
+}
+
 #search ul {
+  position: absolute;
+  z-index: 1;
+  top: var(--control-size);
+  left: 0;
+  right: 0;
   margin: 0;
   padding: 0;
   border: var(--border-width) solid var(--color-border);
@@ -85,6 +118,12 @@ body {
   cursor: pointer;
 }
 
+#search .result-type {
+  font-size: var(--font-size-small);
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
 #search li[aria-selected='true'] {
   background: var(--color-tape);
   font-weight: 700;
@@ -92,11 +131,11 @@ body {
 
 #side-panel {
   position: fixed;
-  top: calc(var(--gutter) * 2 + var(--control-size) + var(--edge-size));
+  top: calc(var(--gutter) * 2 + var(--control-size) * 2 + var(--spacing) + var(--edge-size));
   left: var(--gutter);
   width: var(--panel-width);
   max-width: calc(100% - 2 * var(--gutter));
-  max-height: calc(100% - var(--control-size) * 3);
+  max-height: calc(100% - var(--control-size) * 4);
   overflow-y: auto;
   padding: var(--gutter);
   background: var(--color-panel);
@@ -108,7 +147,7 @@ body {
 /* A zig-zag torn top edge, drawn just above the panel. */
 #side-panel-edge {
   position: fixed;
-  top: calc(var(--gutter) * 2 + var(--control-size));
+  top: calc(var(--gutter) * 2 + var(--control-size) * 2 + var(--spacing));
   left: var(--gutter);
   width: var(--panel-width);
   max-width: calc(100% - 2 * var(--gutter));
@@ -257,6 +296,7 @@ body {
 }
 
 #search input:focus-visible,
+#search select:focus-visible,
 #side-panel button:focus-visible {
   outline: var(--border-width) solid var(--color-accent);
   outline-offset: calc(var(--border-width) * -1);
@@ -308,7 +348,7 @@ body {
 
 #status {
   position: fixed;
-  top: calc(var(--gutter) * 2 + var(--control-size));
+  top: calc(var(--gutter) * 2 + var(--control-size) * 2 + var(--spacing));
   left: var(--gutter);
   max-width: calc(100% - 2 * var(--gutter));
   padding: var(--spacing);
@@ -350,8 +390,14 @@ body {
     display: none;
   }
 
+  #genre-summary {
+    top: calc(var(--gutter) * 3 + var(--control-size) * 3 + var(--spacing));
+    left: var(--gutter);
+    max-width: calc(100% - 2 * var(--gutter));
+  }
+
   #map-controls {
-    top: calc(var(--gutter) * 2 + var(--control-size));
+    top: calc(var(--gutter) * 2 + var(--control-size) * 2 + var(--spacing));
     bottom: auto;
   }
 }

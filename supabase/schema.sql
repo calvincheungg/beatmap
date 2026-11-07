@@ -1,4 +1,4 @@
--- Run once in the Supabase SQL editor.
+-- Run in the Supabase SQL editor. Safe to run again: existing data is kept, and new columns are added.
 -- Visitors can only read. Only the service key, used by the GitHub Action, can write.
 
 create table if not exists public.events (
@@ -16,6 +16,9 @@ create table if not exists public.events (
   fetched_at timestamptz not null default now(),
   primary key (source, source_id)
 );
+
+alter table public.events add column if not exists genre text;
+alter table public.events add column if not exists sub_genre text;
 
 create index if not exists events_venue_date on public.events (venue_id, local_date);
 create index if not exists events_date on public.events (local_date);
@@ -47,7 +50,9 @@ select
   case
     when local_date < (now() at time zone 'America/Toronto')::date then 'over'
     else 'upcoming'
-  end as timing
+  end as timing,
+  genre,
+  sub_genre
 from public.events;
 
 revoke all on public.events_with_timing from anon, authenticated;

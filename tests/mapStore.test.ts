@@ -14,6 +14,7 @@ describe('mapStore', () => {
       loadState: 'loading',
       events: [],
       eventsLoaded: false,
+      selectedGenre: null,
     }),
   );
 
@@ -30,6 +31,13 @@ describe('mapStore', () => {
     expect(useMapStore.getState().flat).toBe(true);
     useMapStore.getState().toggleFlat();
     expect(useMapStore.getState().flat).toBe(false);
+  });
+
+  it('sets and clears the genre filter', () => {
+    useMapStore.getState().setGenre('Rock');
+    expect(useMapStore.getState().selectedGenre).toBe('Rock');
+    useMapStore.getState().setGenre(null);
+    expect(useMapStore.getState().selectedGenre).toBeNull();
   });
 
   it('records loaded events and failed loads', () => {

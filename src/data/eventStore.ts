@@ -71,6 +71,8 @@ export async function syncEvents(events: ShowEvent[], runStart: Date, config: St
       local_time: event.time,
       status: event.status,
       url: event.url,
+      genre: event.genre,
+      sub_genre: event.subGenre,
       fetched_at: fetchedAt,
     }));
     await check(

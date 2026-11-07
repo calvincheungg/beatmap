@@ -2,15 +2,19 @@ import { describe, expect, it } from 'vitest';
 import {
   formatShowDate,
   formatShowTime,
+  genreOptions,
   loadEvents,
+  matchesGenre,
   parseEventRows,
+  searchGenres,
   showStatusLabel,
   todayString,
   upcomingShows,
+  venuesWithShows,
   type ShowEvent,
 } from '../src/data/events';
 
-const show = (id: string, venueId: string, date: string): ShowEvent => ({
+const show = (id: string, venueId: string, date: string, genre: string | null = null, subGenre: string | null = null): ShowEvent => ({
   id,
   name: id,
   date,
@@ -18,6 +22,8 @@ const show = (id: string, venueId: string, date: string): ShowEvent => ({
   status: 'onsale',
   url: `https://www.ticketmaster.ca/event/${id}`,
   venueId,
+  genre,
+  subGenre,
 });
 
 const row = (id: string, overrides: Record<string, unknown> = {}) => ({
@@ -29,6 +35,8 @@ const row = (id: string, overrides: Record<string, unknown> = {}) => ({
   local_time: '20:00:00',
   status: 'onsale',
   url: `https://www.ticketmaster.ca/event/${id}`,
+  genre: 'Rock',
+  sub_genre: 'Punk',
   ...overrides,
 });
 
@@ -43,6 +51,8 @@ describe('parseEventRows', () => {
         status: 'onsale',
         url: 'https://www.ticketmaster.ca/event/a',
         venueId: 'v',
+        genre: 'Rock',
+        subGenre: 'Punk',
       },
     ]);
   });
@@ -112,6 +122,51 @@ describe('upcomingShows', () => {
   it('keeps this venue from today on', () => {
     const events = [show('past', 'v', '2026-11-05'), show('today', 'v', '2026-11-06'), show('later', 'v', '2026-12-01'), show('other', 'w', '2026-12-01')];
     expect(upcomingShows(events, 'v', '2026-11-06').map((event) => event.id)).toEqual(['today', 'later']);
+  });
+});
+
+describe('genres', () => {
+  const today = '2026-11-06';
+  const events = [
+    show('old', 'gone', '2026-11-01', 'Polka'),
+    show('a', 'v', '2026-12-01', 'Rock', 'Punk'),
+    show('b', 'v', '2026-12-02', 'Rock', 'Emo'),
+    show('c', 'w', '2026-12-03', 'Pop', 'K-Pop'),
+    show('d', 'w', '2026-12-04', null, null),
+  ];
+
+  it('matches a genre or sub-genre, and null matches everything', () => {
+    expect(matchesGenre(events[1]!, 'Rock')).toBe(true);
+    expect(matchesGenre(events[1]!, 'Punk')).toBe(true);
+    expect(matchesGenre(events[1]!, 'Pop')).toBe(false);
+    expect(matchesGenre(events[4]!, null)).toBe(true);
+    expect(matchesGenre(events[4]!, 'Rock')).toBe(false);
+  });
+
+  it('filters a venue by genre', () => {
+    expect(upcomingShows(events, 'v', today, 'Emo').map((event) => event.id)).toEqual(['b']);
+    expect(upcomingShows(events, 'w', today, 'Rock')).toEqual([]);
+    expect(upcomingShows(events, 'v', today)).toHaveLength(2);
+  });
+
+  it('finds venues with a matching upcoming show', () => {
+    expect(venuesWithShows(events, today, 'Rock')).toEqual(new Set(['v']));
+    expect(venuesWithShows(events, today, 'Polka')).toEqual(new Set());
+    expect(venuesWithShows(events, today)).toEqual(new Set(['v', 'w']));
+  });
+
+  it('lists upcoming main genres, most shows first, skipping empty ones', () => {
+    expect(genreOptions(events, today)).toEqual([
+      { name: 'Rock', count: 2 },
+      { name: 'Pop', count: 1 },
+    ]);
+  });
+
+  it('searches genres and sub-genres, best match first', () => {
+    expect(searchGenres('emo', events, today)).toEqual([{ name: 'Emo', count: 1 }]);
+    expect(searchGenres('POP', events, today).map((item) => item.name)).toEqual(['Pop', 'K-Pop']);
+    expect(searchGenres('', events, today)).toEqual([]);
+    expect(searchGenres('polka', events, today)).toEqual([]);
   });
 });
 

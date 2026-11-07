@@ -54,10 +54,17 @@ export interface ApiVenue {
   location?: { latitude?: string; longitude?: string };
 }
 
+export interface ApiClassification {
+  primary?: boolean;
+  genre?: { name?: string };
+  subGenre?: { name?: string };
+}
+
 export interface ApiEvent {
   id?: string;
   name?: string;
   url?: string;
+  classifications?: ApiClassification[];
   dates?: {
     start?: { localDate?: string; localTime?: unknown };
     status?: { code?: string };
@@ -187,6 +194,29 @@ export interface ShowEvent {
   status: string;
   url: string;
   venueId: string;
+  /** Null when Ticketmaster gives only a placeholder like "Other". */
+  genre: string | null;
+  subGenre: string | null;
+}
+
+/** Labels too vague to filter by. */
+const PLACEHOLDER_GENRES = new Set(['other', 'undefined', 'music', '']);
+/** Different labels for the same genre. */
+const GENRE_ALIASES: Record<string, string> = { Dance: 'Dance/Electronic' };
+
+export function cleanGenre(name: string | undefined): string | null {
+  const trimmed = (name ?? '').trim();
+  if (PLACEHOLDER_GENRES.has(trimmed.toLowerCase())) return null;
+  return GENRE_ALIASES[trimmed] ?? trimmed;
+}
+
+function primaryGenres(event: ApiEvent): { genre: string | null; subGenre: string | null } {
+  const classifications = event.classifications ?? [];
+  const primary = classifications.find((item) => item.primary) ?? classifications[0];
+  const genre = cleanGenre(primary?.genre?.name);
+  const subGenre = cleanGenre(primary?.subGenre?.name);
+  // Sub-genres often just repeat the genre.
+  return { genre, subGenre: subGenre === genre ? null : subGenre };
 }
 
 export interface CoverageReport {
@@ -230,6 +260,7 @@ export function toShowEvents<T extends MatchableVenue>(apiEvents: ApiEvent[], ve
       status,
       url: event.url,
       venueId: venue.id,
+      ...primaryGenres(event),
     });
   }
   events.sort((a, b) => `${a.date} ${a.time ?? ''}`.localeCompare(`${b.date} ${b.time ?? ''}`));
