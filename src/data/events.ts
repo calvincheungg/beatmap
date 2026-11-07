@@ -24,6 +24,10 @@ export function parseEventRows(rows: unknown): ShowEvent[] {
       genre,
       sub_genre: subGenre,
       artists,
+      price_min: priceMin,
+      price_max: priceMax,
+      currency,
+      age_restriction: ageLabel,
     } = row;
     if (
       typeof source !== 'string' ||
@@ -49,6 +53,10 @@ export function parseEventRows(rows: unknown): ShowEvent[] {
         genre: typeof genre === 'string' ? genre : null,
         subGenre: typeof subGenre === 'string' ? subGenre : null,
         artists: Array.isArray(artists) ? artists.filter((artist): artist is string => typeof artist === 'string') : [],
+        priceMin: typeof priceMin === 'number' ? priceMin : null,
+        priceMax: typeof priceMax === 'number' ? priceMax : null,
+        currency: typeof currency === 'string' ? currency : null,
+        ageLabel: typeof ageLabel === 'string' ? ageLabel : null,
       },
     ];
   });
@@ -69,7 +77,7 @@ export async function loadEvents(
   try {
     for (let page = 0; page < MAX_PAGES; page++) {
       const params = new URLSearchParams({
-        select: 'source,source_id,venue_id,name,local_date,local_time,status,url,genre,sub_genre,artists',
+        select: 'source,source_id,venue_id,name,local_date,local_time,status,url,genre,sub_genre,artists,price_min,price_max,currency,age_restriction',
         timing: 'eq.upcoming',
         order: 'local_date.asc,local_time.asc,source_id.asc',
         limit: String(PAGE_SIZE),
@@ -94,24 +102,40 @@ export function todayString(now: Date = new Date()): string {
   return `${now.getFullYear()}-${month}-${day}`;
 }
 
+export type AgeFilter = 'all-ages' | 'adults';
+
 /** What the visitor has narrowed the listings to. Null means no limit. */
 export interface ShowFilter {
   genre: string | null;
   from: string | null;
   to: string | null;
+  /** The most a show's cheapest ticket can cost. */
+  maxPrice: number | null;
+  age: AgeFilter | null;
 }
 
-export const NO_FILTER: ShowFilter = { genre: null, from: null, to: null };
+export const NO_FILTER: ShowFilter = { genre: null, from: null, to: null, maxPrice: null, age: null };
 
-export function isFiltering({ genre, from, to }: ShowFilter): boolean {
-  return genre !== null || from !== null || to !== null;
+export function isFiltering({ genre, from, to, maxPrice, age }: ShowFilter): boolean {
+  return genre !== null || from !== null || to !== null || maxPrice !== null || age !== null;
 }
 
-/** True if a show fits the filter. A genre matches a show's main genre or its sub-genre. */
-export function matchesFilter(event: ShowEvent, { genre, from, to }: ShowFilter): boolean {
+/** True for an age label like "19+". */
+export function isAdultsOnly(ageLabel: string | null): boolean {
+  return ageLabel !== null && /^\d+\+$/.test(ageLabel);
+}
+
+/**
+ * True if a show fits the filter. A genre matches a show's main genre or its sub-genre. Price and
+ * age filters leave out shows whose listing doesn't give a price or age, since they can't be checked.
+ */
+export function matchesFilter(event: ShowEvent, { genre, from, to, maxPrice, age }: ShowFilter): boolean {
   if (genre !== null && event.genre !== genre && event.subGenre !== genre) return false;
   if (from !== null && event.date < from) return false;
-  return to === null || event.date <= to;
+  if (to !== null && event.date > to) return false;
+  if (maxPrice !== null && (event.priceMin === null || event.priceMin > maxPrice)) return false;
+  if (age === 'all-ages' && event.ageLabel !== 'All ages') return false;
+  return age !== 'adults' || isAdultsOnly(event.ageLabel);
 }
 
 /** A venue's shows from today on, since a page can stay open for days. They're already in date order. */
@@ -213,6 +237,19 @@ export function formatShowTime(time: string | null): string | null {
   const hours = Number(match[1]);
   const suffix = hours >= 12 ? 'PM' : 'AM';
   return `${hours % 12 || 12}:${match[2]} ${suffix}`;
+}
+
+function formatMoney(amount: number, currency: string | null): string {
+  const text = Number.isInteger(amount) ? String(amount) : amount.toFixed(2);
+  // Listings are in Canadian dollars. Any other currency gets named, so a price is never misread.
+  return currency && currency !== 'CAD' ? `${currency} $${text}` : `$${text}`;
+}
+
+/** "$25" for one price, "From $25" for a range, and null when the price isn't known. */
+export function priceLabel({ priceMin, priceMax, currency }: Pick<ShowEvent, 'priceMin' | 'priceMax' | 'currency'>): string | null {
+  if (priceMin === null) return null;
+  const price = formatMoney(priceMin, currency);
+  return priceMax !== null && priceMax > priceMin ? `From ${price}` : price;
 }
 
 const STATUS_LABELS: Record<string, string> = {

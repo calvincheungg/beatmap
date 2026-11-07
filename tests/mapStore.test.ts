@@ -18,6 +18,8 @@ describe('mapStore', () => {
       eventsLoaded: false,
       selectedGenre: null,
       dateFilter: ANY_DATE,
+      priceFilter: null,
+      ageFilter: null,
     }),
   );
 
@@ -44,8 +46,9 @@ describe('mapStore', () => {
   });
 
   it('builds the listings filter from the genre and date choices', () => {
-    expect(showFilterFrom('Rock', { preset: 'week', from: null, to: null }, '2026-11-06')).toEqual({ genre: 'Rock', from: '2026-11-06', to: '2026-11-12' });
-    expect(showFilterFrom(null, ANY_DATE, '2026-11-06')).toEqual({ genre: null, from: null, to: null });
+    const choices = { selectedGenre: 'Rock', dateFilter: { preset: 'week' as const, from: null, to: null }, priceFilter: 50, ageFilter: 'adults' as const };
+    expect(showFilterFrom(choices, '2026-11-06')).toEqual({ genre: 'Rock', from: '2026-11-06', to: '2026-11-12', maxPrice: 50, age: 'adults' });
+    expect(showFilterFrom({ selectedGenre: null, dateFilter: ANY_DATE, priceFilter: null, ageFilter: null }, '2026-11-06')).toEqual({ genre: null, from: null, to: null, maxPrice: null, age: null });
   });
 
   describe('selectShow', () => {
@@ -74,6 +77,10 @@ describe('mapStore', () => {
       genre: 'Rock',
       subGenre: null,
       artists: [],
+      priceMin: null,
+      priceMax: null,
+      currency: null,
+      ageLabel: null,
     };
 
     it('opens the venue and marks the show', () => {
@@ -83,9 +90,9 @@ describe('mapStore', () => {
     });
 
     it('clears filters that would hide the show, and keeps ones that would not', () => {
-      useMapStore.setState({ selectedGenre: 'Jazz', dateFilter: { preset: 'week', from: null, to: null } });
+      useMapStore.setState({ selectedGenre: 'Jazz', dateFilter: { preset: 'week', from: null, to: null }, priceFilter: 25, ageFilter: 'adults' });
       useMapStore.getState().selectShow(show, venue, '2026-11-06');
-      expect(useMapStore.getState()).toMatchObject({ selectedGenre: null, dateFilter: ANY_DATE });
+      expect(useMapStore.getState()).toMatchObject({ selectedGenre: null, dateFilter: ANY_DATE, priceFilter: null, ageFilter: null });
 
       useMapStore.setState({ selectedGenre: 'Rock' });
       useMapStore.getState().selectShow(show, venue, '2026-11-06');

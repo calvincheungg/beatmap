@@ -18,9 +18,11 @@ export function SidePanel() {
   const events = useMapStore((state) => state.events);
   const genre = useMapStore((state) => state.selectedGenre);
   const dateFilter = useMapStore((state) => state.dateFilter);
+  const priceFilter = useMapStore((state) => state.priceFilter);
+  const ageFilter = useMapStore((state) => state.ageFilter);
 
   const today = todayString();
-  const filter = showFilterFrom(genre, dateFilter, today);
+  const filter = showFilterFrom({ selectedGenre: genre, dateFilter, priceFilter, ageFilter }, today);
   const area = findNeighbourhood(selectedId);
   if (!area) return null;
   const areaVenues = venuesIn(area.id);

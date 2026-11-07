@@ -4,11 +4,14 @@ import {
   formatShowDate,
   formatShowTime,
   genreOptions,
+  isAdultsOnly,
   isFiltering,
+  NO_FILTER,
   loadEvents,
   matchesFilter,
   matchingShows,
   parseEventRows,
+  priceLabel,
   searchGenres,
   searchShows,
   showStatusLabel,
@@ -29,6 +32,10 @@ const show = (id: string, venueId: string, date: string, genre: string | null = 
   genre,
   subGenre,
   artists: [],
+  priceMin: null,
+  priceMax: null,
+  currency: null,
+  ageLabel: null,
 });
 
 const row = (id: string, overrides: Record<string, unknown> = {}) => ({
@@ -43,6 +50,10 @@ const row = (id: string, overrides: Record<string, unknown> = {}) => ({
   genre: 'Rock',
   sub_genre: 'Punk',
   artists: ['A Band'],
+  price_min: 25.5,
+  price_max: 40,
+  currency: 'CAD',
+  age_restriction: 'All ages',
   ...overrides,
 });
 
@@ -60,6 +71,10 @@ describe('parseEventRows', () => {
         genre: 'Rock',
         subGenre: 'Punk',
         artists: ['A Band'],
+        priceMin: 25.5,
+        priceMax: 40,
+        currency: 'CAD',
+        ageLabel: 'All ages',
       },
     ]);
   });
@@ -142,7 +157,7 @@ describe('genres', () => {
     show('d', 'w', '2026-12-04', null, null),
   ];
 
-  const genre = (name: string | null) => ({ genre: name, from: null, to: null });
+  const genre = (name: string | null) => ({ ...NO_FILTER, genre: name });
 
   it('matches a genre or sub-genre, and no filter matches everything', () => {
     expect(matchesFilter(events[1]!, genre('Rock'))).toBe(true);
@@ -154,19 +169,40 @@ describe('genres', () => {
 
   it('matches dates inclusively, on either or both ends', () => {
     const day = events[1]!; // 2026-12-01
-    expect(matchesFilter(day, { genre: null, from: '2026-12-01', to: '2026-12-01' })).toBe(true);
-    expect(matchesFilter(day, { genre: null, from: '2026-12-02', to: null })).toBe(false);
-    expect(matchesFilter(day, { genre: null, from: null, to: '2026-11-30' })).toBe(false);
+    expect(matchesFilter(day, { ...NO_FILTER, from: '2026-12-01', to: '2026-12-01' })).toBe(true);
+    expect(matchesFilter(day, { ...NO_FILTER, from: '2026-12-02' })).toBe(false);
+    expect(matchesFilter(day, { ...NO_FILTER, to: '2026-11-30' })).toBe(false);
   });
 
   it('combines genre and dates', () => {
-    expect(matchingShows(events, today, { genre: 'Rock', from: '2026-12-02', to: null }).map((event) => event.id)).toEqual(['b']);
+    expect(matchingShows(events, today, { ...NO_FILTER, genre: 'Rock', from: '2026-12-02' }).map((event) => event.id)).toEqual(['b']);
+  });
+
+  it('filters by the cheapest ticket, leaving out shows without a price', () => {
+    const cheap: ShowEvent = { ...show('cheap', 'v', '2026-12-01'), priceMin: 20, priceMax: 60 };
+    const dear: ShowEvent = { ...show('dear', 'v', '2026-12-01'), priceMin: 80, priceMax: 80 };
+    const unknown = show('unknown', 'v', '2026-12-01');
+    expect(matchingShows([cheap, dear, unknown], today, { ...NO_FILTER, maxPrice: 50 }).map((event) => event.id)).toEqual(['cheap']);
+    expect(matchingShows([cheap, dear, unknown], today, { ...NO_FILTER, maxPrice: 80 }).map((event) => event.id)).toEqual(['cheap', 'dear']);
+  });
+
+  it('filters by age, leaving out shows that do not say', () => {
+    const allAges: ShowEvent = { ...show('all', 'v', '2026-12-01'), ageLabel: 'All ages' };
+    const adults: ShowEvent = { ...show('adults', 'v', '2026-12-01'), ageLabel: '19+' };
+    const unknown = show('unknown', 'v', '2026-12-01');
+    const ids = (age: 'all-ages' | 'adults') => matchingShows([allAges, adults, unknown], today, { ...NO_FILTER, age }).map((event) => event.id);
+    expect(ids('all-ages')).toEqual(['all']);
+    expect(ids('adults')).toEqual(['adults']);
+    expect(isAdultsOnly('18+')).toBe(true);
+    expect(isAdultsOnly('All ages')).toBe(false);
   });
 
   it('knows when a filter is on', () => {
     expect(isFiltering(genre(null))).toBe(false);
     expect(isFiltering(genre('Rock'))).toBe(true);
-    expect(isFiltering({ genre: null, from: today, to: null })).toBe(true);
+    expect(isFiltering({ ...NO_FILTER, from: today })).toBe(true);
+    expect(isFiltering({ ...NO_FILTER, maxPrice: 25 })).toBe(true);
+    expect(isFiltering({ ...NO_FILTER, age: 'adults' })).toBe(true);
   });
 
   it('filters a venue', () => {
@@ -196,7 +232,7 @@ describe('genres', () => {
   });
 
   it('counts genres within the date range, ignoring the genre choice', () => {
-    const options = genreOptions(events, today, { genre: 'Pop', from: '2026-12-02', to: '2026-12-02' });
+    const options = genreOptions(events, today, { ...NO_FILTER, genre: 'Pop', from: '2026-12-02', to: '2026-12-02' });
     expect(options.genres).toEqual([{ name: 'Rock', count: 1 }]);
     expect(options.subGenres).toEqual([{ name: 'Emo', count: 1 }]);
   });
@@ -259,6 +295,22 @@ describe('formatting', () => {
     expect(formatShowTime('00:05:00')).toBe('12:05 AM');
     expect(formatShowTime('12:00:00')).toBe('12:00 PM');
     expect(formatShowTime(null)).toBeNull();
+  });
+
+  it('shows one price as it is, and a range as the lowest price', () => {
+    expect(priceLabel({ priceMin: 24.92, priceMax: 24.92, currency: 'CAD' })).toBe('$24.92');
+    expect(priceLabel({ priceMin: 100, priceMax: 100, currency: 'CAD' })).toBe('$100');
+    expect(priceLabel({ priceMin: 100, priceMax: 250, currency: 'CAD' })).toBe('From $100');
+    expect(priceLabel({ priceMin: 8.1, priceMax: 13.58, currency: 'CAD' })).toBe('From $8.10');
+  });
+
+  it('shows nothing when the price is unknown', () => {
+    expect(priceLabel({ priceMin: null, priceMax: null, currency: null })).toBeNull();
+  });
+
+  it('names any currency other than Canadian dollars', () => {
+    expect(priceLabel({ priceMin: 50, priceMax: 50, currency: 'USD' })).toBe('USD $50');
+    expect(priceLabel({ priceMin: 50, priceMax: 50, currency: null })).toBe('$50');
   });
 
   it('labels only unusual statuses', () => {

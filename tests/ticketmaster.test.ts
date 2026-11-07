@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
   cleanGenre,
+  readAge,
+  readPrice,
   encodeGeohash,
   fetchMusicEvents,
   matchVenue,
@@ -67,6 +69,8 @@ describe('toShowEvents', () => {
     url: `https://www.ticketmaster.ca/event/${id}`,
     dates: { start: { localDate: '2026-12-01', localTime: '20:00:00' }, status: { code: 'onsale' } },
     classifications: [{ primary: true, genre: { name: 'Rock' }, subGenre: { name: 'Hardcore Punk' } }],
+    priceRanges: [{ currency: 'CAD', min: 24.92, max: 24.92 }],
+    info: 'LEGAL AGE 19+ Doors 8pm',
     _embedded: {
       venues: [{ name: 'Horseshoe Tavern', location: at(43.649, -79.3959) }],
       attractions: [{ name: 'Headliner' }, { name: ' Support Act ' }, { name: 'Headliner' }, {}],
@@ -91,6 +95,10 @@ describe('toShowEvents', () => {
         genre: 'Rock',
         subGenre: 'Hardcore Punk',
         artists: ['Headliner', 'Support Act'],
+        priceMin: 24.92,
+        priceMax: 24.92,
+        currency: 'CAD',
+        ageLabel: '19+',
       },
     ]);
     expect(report.matchedCounts.get('horseshoe')).toBe(1);
@@ -153,6 +161,50 @@ describe('cleanGenre', () => {
     expect(cleanGenre(undefined)).toBeNull();
     expect(cleanGenre('Dance')).toBe('Dance/Electronic');
     expect(cleanGenre(' Rock ')).toBe('Rock');
+  });
+});
+
+describe('readPrice', () => {
+  const none = { priceMin: null, priceMax: null, currency: null };
+
+  it('reads one price or a range', () => {
+    expect(readPrice({ priceRanges: [{ currency: 'CAD', min: 25, max: 25 }] })).toEqual({ priceMin: 25, priceMax: 25, currency: 'CAD' });
+    expect(readPrice({ priceRanges: [{ currency: 'CAD', min: 25, max: 90 }] })).toEqual({ priceMin: 25, priceMax: 90, currency: 'CAD' });
+  });
+
+  it('treats a price of 0 as unknown, not free', () => {
+    expect(readPrice({ priceRanges: [{ currency: 'CAD', min: 0, max: 0 }] })).toEqual(none);
+  });
+
+  it('handles missing prices and a missing or lower maximum', () => {
+    expect(readPrice({})).toEqual(none);
+    expect(readPrice({ priceRanges: [] })).toEqual(none);
+    expect(readPrice({ priceRanges: [{ min: 30 }] })).toEqual({ priceMin: 30, priceMax: 30, currency: null });
+    expect(readPrice({ priceRanges: [{ min: 30, max: 10 }] }).priceMax).toBe(30);
+  });
+});
+
+describe('readAge', () => {
+  it('reads all ages and minimum ages from the listing text', () => {
+    expect(readAge({ info: 'This is an ALL AGES event. Doors: 7pm' })).toBe('All ages');
+    expect(readAge({ pleaseNote: 'This event is 19 and over.' })).toBe('19+');
+    expect(readAge({ info: 'LEGAL AGE 19+ (Valid Photo I.D. Required)' })).toBe('19+');
+    expect(readAge({ ticketTextLines: { 'en-us': { line5: '  ALL AGES / R837398916  ' } } })).toBe('All ages');
+    expect(readAge({ info: 'Patrons must be 18 years of age or older' })).toBe('18+');
+  });
+
+  it('treats a show with an all-ages floor as all ages, even with 19+ areas', () => {
+    expect(readAge({ info: 'GA Floor is ALL AGES. GA Balcony is LEGAL AGE 19+.' })).toBe('All ages');
+  });
+
+  it('falls back to the enforced legal age, and otherwise gives nothing', () => {
+    expect(readAge({ ageRestrictions: { legalAgeEnforced: true } })).toBe('19+');
+    expect(readAge({ ageRestrictions: { legalAgeEnforced: false } })).toBeNull();
+    expect(readAge({})).toBeNull();
+  });
+
+  it('ignores prices and years that look like ages', () => {
+    expect(readAge({ info: 'Tickets $19+ fees. Since 2019+' })).toBeNull();
   });
 });
 

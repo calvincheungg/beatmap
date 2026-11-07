@@ -74,6 +74,10 @@ export async function syncEvents(events: ShowEvent[], runStart: Date, config: St
       genre: event.genre,
       sub_genre: event.subGenre,
       artists: event.artists,
+      price_min: event.priceMin,
+      price_max: event.priceMax,
+      currency: event.currency,
+      age_restriction: event.ageLabel,
       fetched_at: fetchedAt,
     }));
     await check(

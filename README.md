@@ -83,6 +83,10 @@ npm run data:events
 
 Genres come from Ticketmaster too. Search finds artists, including support acts, as well as genres and sub-genres, and the genre and date filters limit the map and panel to matching shows. Choosing a main genre like Rock includes its sub-genres, like Punk. Placeholder labels like "Other" count as no genre.
 
+Prices appear when Ticketmaster gives them: one price as `$25`, or a range as its lowest price, `From $25`. Most shows sold on Ticketmaster.ca have none, and a listed price of 0 means unknown rather than free, so no price is shown for either.
+
+Age rules come from each listing's text, like "LEGAL AGE 19+" or "ALL AGES". A show with an all-ages floor and a 19+ balcony counts as all ages. The price and age filters leave out shows whose listing doesn't say.
+
 Each sync removes upcoming events no longer listed, and deletes events more than 30 days past. A show's `timing` (`upcoming` or `over`) comes from the `events_with_timing` view rather than being stored.
 
 ### Database changes

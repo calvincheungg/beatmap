@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { ANY_DATE, dateRangeFor, type DateFilter } from '../data/dateFilter';
-import { matchesFilter, type ShowEvent, type ShowFilter } from '../data/events';
+import { matchesFilter, type AgeFilter, type ShowEvent, type ShowFilter } from '../data/events';
 import type { Neighbourhood } from '../data/neighbourhoods';
 import type { Venue } from '../data/venues';
 import { theme } from '../theme';
@@ -14,7 +14,7 @@ export interface FlyRequest {
 
 export type LoadState = 'loading' | 'ready' | 'error';
 
-interface MapState {
+export interface MapState {
   /** Total 90 degree rotation steps from the default view. */
   rotationSteps: number;
   /** True for the top-down map, false for the isometric view. */
@@ -34,6 +34,9 @@ interface MapState {
   /** The genre filter. Null shows everything. */
   selectedGenre: string | null;
   dateFilter: DateFilter;
+  /** The most the cheapest ticket can cost, in dollars. */
+  priceFilter: number | null;
+  ageFilter: AgeFilter | null;
   rotate: (steps: number) => void;
   toggleFlat: () => void;
   toggleLabels: () => void;
@@ -48,6 +51,8 @@ interface MapState {
   setEvents: (events: ShowEvent[] | null) => void;
   setGenre: (genre: string | null) => void;
   setDateFilter: (dateFilter: DateFilter) => void;
+  setPriceFilter: (maxPrice: number | null) => void;
+  setAgeFilter: (age: AgeFilter | null) => void;
 }
 
 export const useMapStore = create<MapState>()((set) => ({
@@ -64,6 +69,8 @@ export const useMapStore = create<MapState>()((set) => ({
   eventsLoaded: false,
   selectedGenre: null,
   dateFilter: ANY_DATE,
+  priceFilter: null,
+  ageFilter: null,
   rotate: (steps) => set((state) => ({ rotationSteps: state.rotationSteps + steps })),
   toggleFlat: () => set((state) => ({ flat: !state.flat })),
   toggleLabels: () => set((state) => ({ showLabels: !state.showLabels })),
@@ -78,13 +85,13 @@ export const useMapStore = create<MapState>()((set) => ({
     })),
   selectShow: (show, venue, today) =>
     set((state) => {
-      const hidden = !matchesFilter(show, showFilterFrom(state.selectedGenre, state.dateFilter, today));
+      const hidden = !matchesFilter(show, showFilterFrom(state, today));
       return {
         selectedVenueId: venue.id,
         selectedNeighbourhoodId: venue.neighbourhood,
         highlightedShowId: show.id,
         flyRequest: { lat: venue.lat, lon: venue.lon, zoom: theme.camera.venueZoom },
-        ...(hidden ? { selectedGenre: null, dateFilter: ANY_DATE } : {}),
+        ...(hidden ? { selectedGenre: null, dateFilter: ANY_DATE, priceFilter: null, ageFilter: null } : {}),
       };
     }),
   setHoveredVenue: (id) => set({ hoveredVenueId: id }),
@@ -93,9 +100,19 @@ export const useMapStore = create<MapState>()((set) => ({
   setEvents: (events) => set({ events, eventsLoaded: true }),
   setGenre: (selectedGenre) => set({ selectedGenre }),
   setDateFilter: (dateFilter) => set({ dateFilter }),
+  setPriceFilter: (priceFilter) => set({ priceFilter }),
+  setAgeFilter: (ageFilter) => set({ ageFilter }),
 }));
 
-/** Turns the genre and date choices into the filter applied to listings. */
-export function showFilterFrom(genre: string | null, dateFilter: DateFilter, today: string): ShowFilter {
-  return { genre, ...dateRangeFor(dateFilter, today) };
+export type FilterChoices = Pick<MapState, 'selectedGenre' | 'dateFilter' | 'priceFilter' | 'ageFilter'>;
+
+/** Turns the visitor's filter choices into the filter applied to listings. */
+export function showFilterFrom(choices: FilterChoices, today: string): ShowFilter {
+  const { selectedGenre, dateFilter, priceFilter, ageFilter } = choices;
+  return { genre: selectedGenre, ...dateRangeFor(dateFilter, today), maxPrice: priceFilter, age: ageFilter };
+}
+
+/** True if any filter choice differs between two states. */
+export function filterChoicesChanged(a: FilterChoices, b: FilterChoices): boolean {
+  return a.selectedGenre !== b.selectedGenre || a.dateFilter !== b.dateFilter || a.priceFilter !== b.priceFilter || a.ageFilter !== b.ageFilter;
 }

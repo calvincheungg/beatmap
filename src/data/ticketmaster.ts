@@ -65,6 +65,11 @@ export interface ApiEvent {
   name?: string;
   url?: string;
   classifications?: ApiClassification[];
+  priceRanges?: { currency?: string; min?: number; max?: number }[];
+  info?: string;
+  pleaseNote?: string;
+  ticketTextLines?: Record<string, Record<string, string>>;
+  ageRestrictions?: { legalAgeEnforced?: boolean };
   dates?: {
     start?: { localDate?: string; localTime?: unknown };
     status?: { code?: string };
@@ -199,6 +204,40 @@ export interface ShowEvent {
   subGenre: string | null;
   /** Everyone on the bill, including support acts the title often leaves out. */
   artists: string[];
+  /** Null when unknown, which is most shows sold on Ticketmaster.ca. It never means free. */
+  priceMin: number | null;
+  priceMax: number | null;
+  currency: string | null;
+  /** "All ages", "19+" and so on. Null when the listing doesn't say. */
+  ageLabel: string | null;
+}
+
+const ALL_AGES = /\ball[\s-]+ages\b/i;
+/** "19+", "19 and over" or "19 years of age or older", but not a price like "$19+" or a year like "2019+". */
+const MINIMUM_AGE = /(?<![\d$.])(1[6-9]|2[01])\s*(?:\+|and over|and older|years?\s+(?:of\s+age\s+)?(?:and|or)\s+(?:over|older))/gi;
+/** Ontario's drinking age, which is what an enforced legal age means here. */
+const LEGAL_AGE = 19;
+
+/**
+ * Reads a show's age rule from its listing text. Some shows are all ages on the floor with a 19+
+ * balcony, so "all ages" wins: anyone can attend.
+ */
+export function readAge(event: ApiEvent): string | null {
+  const lines = Object.values(event.ticketTextLines ?? {}).flatMap((group) => Object.values(group));
+  const text = [event.name, event.info, event.pleaseNote, ...lines].filter(Boolean).join(' ');
+  if (ALL_AGES.test(text)) return 'All ages';
+  const ages = [...text.matchAll(MINIMUM_AGE)].map((match) => Number(match[1]));
+  if (ages.length > 0) return `${Math.max(...ages)}+`;
+  return event.ageRestrictions?.legalAgeEnforced ? `${LEGAL_AGE}+` : null;
+}
+
+/** Ticketmaster uses a price of 0 for "not known": it's on sold-out and paid shows alike. */
+export function readPrice(event: ApiEvent): Pick<ShowEvent, 'priceMin' | 'priceMax' | 'currency'> {
+  const range = event.priceRanges?.[0];
+  const min = range?.min;
+  if (typeof min !== 'number' || !Number.isFinite(min) || min <= 0) return { priceMin: null, priceMax: null, currency: null };
+  const max = typeof range?.max === 'number' && range.max >= min ? range.max : min;
+  return { priceMin: min, priceMax: max, currency: range?.currency ?? null };
 }
 
 /** Labels too vague to filter by. */
@@ -266,6 +305,8 @@ export function toShowEvents<T extends MatchableVenue>(apiEvents: ApiEvent[], ve
       url: event.url,
       venueId: venue.id,
       ...primaryGenres(event),
+      ...readPrice(event),
+      ageLabel: readAge(event),
       artists: [...new Set((event._embedded?.attractions ?? []).map((artist) => artist.name?.trim()).filter((name) => !!name))] as string[],
     });
   }

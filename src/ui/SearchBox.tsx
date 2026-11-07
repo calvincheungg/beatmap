@@ -30,7 +30,7 @@ export function SearchBox() {
   const [active, setActive] = useState(0);
 
   const today = todayString();
-  const genres = searchGenres(query, events ?? [], today, showFilterFrom(null, dateFilter, today)).map(
+  const genres = searchGenres(query, events ?? [], today, showFilterFrom({ selectedGenre: null, dateFilter, priceFilter: null, ageFilter: null }, today)).map(
     (item): Result => ({ type: 'genre', ...item }),
   );
   const areas = searchNeighbourhoods(query).map((area): Result => ({ type: 'area', area }));

@@ -2,7 +2,7 @@ import { LngLatBounds, Marker, type GeoJSONSource, type Map as MapLibreMap, type
 import { isFiltering, todayString, venuesWithShows } from '../data/events';
 import { venues } from '../data/venues';
 import { MAX_PIN_SLOT, pinSlots } from '../map/pinLayout';
-import { showFilterFrom, useMapStore } from '../state/mapStore';
+import { filterChoicesChanged, showFilterFrom, useMapStore } from '../state/mapStore';
 import { theme, toCssColor } from '../theme';
 
 const SOURCE = 'venues';
@@ -89,9 +89,10 @@ export function addVenueLayer(map: MapLibreMap): () => void {
 
   /** With a filter on, only matching venues appear, so cluster numbers stay accurate. */
   const filteredVenues = () => {
-    const { events, selectedGenre, dateFilter } = useMapStore.getState();
+    const state = useMapStore.getState();
+    const { events } = state;
     const today = todayString();
-    const filter = showFilterFrom(selectedGenre, dateFilter, today);
+    const filter = showFilterFrom(state, today);
     return events && isFiltering(filter) ? venuesWithShows(events, today, filter) : undefined;
   };
 
@@ -227,8 +228,14 @@ export function addVenueLayer(map: MapLibreMap): () => void {
     const matchId = (id: string | null) => ['==', ['get', 'id'], id ?? ''] as ['==', ['get', string], string];
     map.setFilter(HOVER_LAYER, matchId(hoveredVenueId));
     map.setFilter(SELECTED_LAYER, matchId(selectedVenueId));
-    // The larger selected pin sits further out, so the regular one would peek out from behind it.
-    map.setFilter(BASE_LAYER, ['all', ['!', ['has', 'point_count']], ['!=', ['get', 'id'], selectedVenueId ?? '']]);
+    // The larger pin drawn on top wouldn't fully cover the regular one, so hide it. It only goes
+    // invisible, because removing it from under the cursor would end the hover and cause flicker.
+    map.setPaintProperty(BASE_LAYER, 'icon-opacity', [
+      'case',
+      ['in', ['get', 'id'], ['literal', [hoveredVenueId ?? '', selectedVenueId ?? '']]],
+      0,
+      1,
+    ]);
     updateCursor();
 
     const shown = venues.find((venue) => venue.id === (hoveredVenueId ?? selectedVenueId));
@@ -245,7 +252,7 @@ export function addVenueLayer(map: MapLibreMap): () => void {
   applySelection();
 
   const stopListening = useMapStore.subscribe((state, previous) => {
-    const filterChanged = state.selectedGenre !== previous.selectedGenre || state.dateFilter !== previous.dateFilter;
+    const filterChanged = filterChoicesChanged(state, previous);
     if (state.events !== previous.events || filterChanged) {
       const only = filteredVenues();
       const shown = only ? venues.filter(({ id }) => only.has(id)) : venues;

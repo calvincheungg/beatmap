@@ -13,6 +13,10 @@ const event = (id: string): ShowEvent => ({
   genre: 'Rock',
   subGenre: null,
   artists: ['A'],
+  priceMin: 25,
+  priceMax: 40,
+  currency: 'CAD',
+  ageLabel: '19+',
 });
 
 interface Call {
@@ -88,6 +92,10 @@ describe('syncEvents', () => {
         genre: 'Rock',
         sub_genre: null,
         artists: ['A'],
+        price_min: 25,
+        price_max: 40,
+        currency: 'CAD',
+        age_restriction: '19+',
         fetched_at: '2026-11-06T18:00:00.000Z',
       },
     ]);

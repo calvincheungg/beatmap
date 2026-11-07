@@ -1,11 +1,23 @@
 import { useEffect, useState } from 'react';
 import { dateFilterLabel, type DatePreset } from '../data/dateFilter';
-import { genreOptions, isFiltering, matchingShows, todayString, venuesWithShows } from '../data/events';
+import { genreOptions, isFiltering, matchingShows, todayString, venuesWithShows, type AgeFilter } from '../data/events';
 import { showFilterFrom, useMapStore } from '../state/mapStore';
 import { DateRangePicker } from './DateRangePicker';
 import { Dropdown, type DropdownGroup } from './Dropdown';
 
 const ALL_GENRES = '';
+const ANY = '';
+const PRICE_ITEMS = [
+  { value: ANY, label: 'Any price' },
+  { value: '25', label: 'Under $25' },
+  { value: '50', label: 'Under $50' },
+  { value: '100', label: 'Under $100' },
+];
+const AGE_ITEMS = [
+  { value: ANY, label: 'Any age' },
+  { value: 'all-ages', label: 'All ages' },
+  { value: 'adults', label: 'Adults only (19+)' },
+];
 const DATE_ITEMS: { value: DatePreset; label: string }[] = [
   { value: 'any', label: 'Any date' },
   { value: 'week', label: 'Next 7 days' },
@@ -20,6 +32,10 @@ export function FilterBar() {
   const dateFilter = useMapStore((state) => state.dateFilter);
   const setGenre = useMapStore((state) => state.setGenre);
   const setDateFilter = useMapStore((state) => state.setDateFilter);
+  const priceFilter = useMapStore((state) => state.priceFilter);
+  const ageFilter = useMapStore((state) => state.ageFilter);
+  const setPriceFilter = useMapStore((state) => state.setPriceFilter);
+  const setAgeFilter = useMapStore((state) => state.setAgeFilter);
   const [choosingDates, setChoosingDates] = useState(false);
 
   // Clicking anywhere else, including the map, closes the calendar.
@@ -41,7 +57,7 @@ export function FilterBar() {
   if (!events || events.length === 0) return null;
 
   const today = todayString();
-  const filter = showFilterFrom(genre, dateFilter, today);
+  const filter = showFilterFrom({ selectedGenre: genre, dateFilter, priceFilter, ageFilter }, today);
   const { genres, subGenres } = genreOptions(events, today, filter);
   const toItems = (list: typeof genres) => list.map(({ name, count }) => ({ value: name, label: `${name} (${count})` }));
 
@@ -55,11 +71,22 @@ export function FilterBar() {
   const dateLabel = dateFilterLabel(dateFilter, today);
   const shows = matchingShows(events, today, filter).length;
   const venues = venuesWithShows(events, today, filter).size;
-  const describe = [genre, dateFilter.preset === 'any' ? null : dateLabel].filter(Boolean).join(' · ');
+  const priceLabelText = PRICE_ITEMS.find((item) => item.value === String(priceFilter ?? ANY))?.label ?? 'Any price';
+  const ageLabelText = AGE_ITEMS.find((item) => item.value === (ageFilter ?? ANY))?.label ?? 'Any age';
+  const describe = [
+    genre,
+    dateFilter.preset === 'any' ? null : dateLabel,
+    priceFilter === null ? null : priceLabelText,
+    ageFilter === null ? null : ageLabelText,
+  ]
+    .filter(Boolean)
+    .join(' · ');
+  // Price and age come only from some listings, so say when shows without them are left out.
+  const leavesOutUnknown = priceFilter !== null || ageFilter !== null;
 
   return (
     <>
-      <div id="filter-row">
+      <div className="filter-row">
         <Dropdown
           id="genre-filter"
           label="Genre"
@@ -96,9 +123,30 @@ export function FilterBar() {
           />
         )}
       </div>
+      <div className="filter-row">
+        <Dropdown
+          id="price-filter"
+          label="Price"
+          buttonText={priceLabelText}
+          value={String(priceFilter ?? ANY)}
+          groups={[{ items: PRICE_ITEMS }]}
+          active={priceFilter !== null}
+          onChange={(value) => setPriceFilter(value ? Number(value) : null)}
+        />
+        <Dropdown
+          id="age-filter"
+          label="Age"
+          buttonText={ageLabelText}
+          value={ageFilter ?? ANY}
+          groups={[{ items: AGE_ITEMS }]}
+          active={ageFilter !== null}
+          onChange={(value) => setAgeFilter((value || null) as AgeFilter | null)}
+        />
+      </div>
       {isFiltering(filter) && (
         <div id="filter-summary" role="status">
           {describe}: {shows === 1 ? '1 show' : `${shows} shows`} at {venues === 1 ? '1 venue' : `${venues} venues`}
+          {leavesOutUnknown && <span className="summary-note">Only shows that list this are included.</span>}
         </div>
       )}
     </>

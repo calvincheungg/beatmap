@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { artistsNotInTitle, formatShowDate, formatShowTime, isFiltering, showStatusLabel, todayString, upcomingShows } from '../data/events';
+import { artistsNotInTitle, formatShowDate, formatShowTime, isFiltering, priceLabel, showStatusLabel, todayString, upcomingShows } from '../data/events';
 import { showFilterFrom, useMapStore } from '../state/mapStore';
 
 /** How many shows to list before the "show all" button. */
@@ -10,6 +10,8 @@ export function VenueShows({ venueId }: { venueId: string }) {
   const events = useMapStore((state) => state.events);
   const genre = useMapStore((state) => state.selectedGenre);
   const dateFilter = useMapStore((state) => state.dateFilter);
+  const priceFilter = useMapStore((state) => state.priceFilter);
+  const ageFilter = useMapStore((state) => state.ageFilter);
   const highlightedId = useMapStore((state) => state.highlightedShowId);
   const [showAll, setShowAll] = useState(false);
   const highlighted = useRef<HTMLLIElement>(null);
@@ -22,7 +24,7 @@ export function VenueShows({ venueId }: { venueId: string }) {
   if (events === null) return <p>Show listings aren't available right now.</p>;
 
   const today = todayString();
-  const filter = showFilterFrom(genre, dateFilter, today);
+  const filter = showFilterFrom({ selectedGenre: genre, dateFilter, priceFilter, ageFilter }, today);
   const shows = upcomingShows(events, venueId, today, filter);
   if (shows.length === 0) {
     return <p>{isFiltering(filter) ? 'No shows here match your filters.' : 'No upcoming shows listed on Ticketmaster.'}</p>;
@@ -39,6 +41,7 @@ export function VenueShows({ venueId }: { venueId: string }) {
           const time = formatShowTime(show.time);
           const status = showStatusLabel(show.status);
           const others = artistsNotInTitle(show);
+          const price = priceLabel(show);
           const isHighlighted = show.id === highlightedId;
           return (
             <li key={show.id} ref={isHighlighted ? highlighted : undefined} className={isHighlighted ? 'is-highlighted' : undefined}>
@@ -48,6 +51,9 @@ export function VenueShows({ venueId }: { venueId: string }) {
                 {formatShowDate(show.date)}
                 {time ? ` · ${time}` : ''}
               </span>
+              {(price || show.ageLabel) && (
+                <span className="show-price">{[price, show.ageLabel].filter(Boolean).join(' · ')}</span>
+              )}
               {(show.subGenre ?? show.genre) && <span>{show.subGenre ?? show.genre}</span>}
               {status && <span className="show-status">{status}</span>}
               <a href={show.url} target="_blank" rel="noopener noreferrer">
