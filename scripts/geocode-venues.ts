@@ -42,8 +42,10 @@ for (const row of rows) {
     missed.push(name);
     continue;
   }
-  // The address is the most precise. The name is the fallback for vague addresses.
-  const match = (await lookup(row.address)) ?? (await lookup(`${name}, Toronto`));
+  // The address is the most precise. The name is the fallback for vague addresses, searched in
+  // the venue's own city, because searching elsewhere can land on an unrelated place.
+  const city = row.address.split(',')[1]?.trim() || 'Toronto';
+  const match = (await lookup(row.address)) ?? (await lookup(`${name}, ${city}`));
   if (match) {
     row.lat = match.lat;
     row.lon = match.lon;
