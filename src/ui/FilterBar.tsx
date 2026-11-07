@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { dateFilterLabel, type DatePreset } from '../data/dateFilter';
 import { genreOptions, isFiltering, matchingShows, todayString, venuesWithShows } from '../data/events';
 import { showFilterFrom, useMapStore } from '../state/mapStore';
+import { DateRangePicker } from './DateRangePicker';
 import { Dropdown, type DropdownGroup } from './Dropdown';
 
 const ALL_GENRES = '';
@@ -20,6 +21,22 @@ export function FilterBar() {
   const setGenre = useMapStore((state) => state.setGenre);
   const setDateFilter = useMapStore((state) => state.setDateFilter);
   const [choosingDates, setChoosingDates] = useState(false);
+
+  // Clicking anywhere else, including the map, closes the calendar.
+  useEffect(() => {
+    if (!choosingDates) return;
+    const onPointerDown = (event: PointerEvent) => {
+      if (event.target instanceof Element && !event.target.closest('#date-range, #date-filter')) setChoosingDates(false);
+    };
+    document.addEventListener('pointerdown', onPointerDown);
+    return () => document.removeEventListener('pointerdown', onPointerDown);
+  }, [choosingDates]);
+
+  /** Closes the calendar, returning focus to the button that opened it. */
+  const finishChoosing = () => {
+    setChoosingDates(false);
+    document.getElementById('date-filter')?.focus();
+  };
 
   if (!events || events.length === 0) return null;
 
@@ -63,7 +80,7 @@ export function FilterBar() {
             const preset = value as DatePreset;
             if (preset === 'custom') {
               setChoosingDates(true);
-              setDateFilter({ preset, from: dateFilter.from ?? today, to: dateFilter.to });
+              setDateFilter({ preset, from: dateFilter.from, to: dateFilter.to });
             } else {
               setChoosingDates(false);
               setDateFilter({ preset, from: null, to: null });
@@ -71,29 +88,12 @@ export function FilterBar() {
           }}
         />
         {choosingDates && (
-          <div id="date-range" role="group" aria-label="Choose dates">
-            <label>
-              From
-              <input
-                type="date"
-                min={today}
-                value={dateFilter.from ?? ''}
-                onChange={(event) => setDateFilter({ ...dateFilter, preset: 'custom', from: event.target.value || null })}
-              />
-            </label>
-            <label>
-              To
-              <input
-                type="date"
-                min={today}
-                value={dateFilter.to ?? ''}
-                onChange={(event) => setDateFilter({ ...dateFilter, preset: 'custom', to: event.target.value || null })}
-              />
-            </label>
-            <button type="button" onClick={() => setChoosingDates(false)}>
-              Done
-            </button>
-          </div>
+          <DateRangePicker
+            range={{ from: dateFilter.from, to: dateFilter.to }}
+            today={today}
+            onChange={(range) => setDateFilter({ preset: 'custom', ...range })}
+            onDone={finishChoosing}
+          />
         )}
       </div>
       {isFiltering(filter) && (

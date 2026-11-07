@@ -44,7 +44,7 @@ body {
 #search {
   position: fixed;
   top: var(--gutter);
-  left: var(--gutter);
+  right: var(--gutter);
   width: var(--panel-width);
   max-width: calc(100% - 2 * var(--gutter));
 }
@@ -151,19 +151,96 @@ body {
   border-top: 0;
   background: var(--color-panel);
   color: var(--color-text);
+  max-height: calc(100vh - var(--control-size) * 3);
+  overflow-y: auto;
 }
 
-#date-range label {
-  display: grid;
-  gap: var(--spacing);
+.calendar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.calendar-header button {
+  width: var(--control-size);
+  height: var(--control-size);
+  border: var(--border-width) solid var(--color-border);
+  background: var(--color-panel);
+  color: var(--color-text);
+  font: inherit;
+  font-size: var(--icon-size);
+  cursor: pointer;
+}
+
+.calendar-header button:disabled {
+  border-color: transparent;
+  color: transparent;
+  cursor: default;
+}
+
+.calendar-header strong {
+  font-family: var(--font-label);
+  font-weight: 400;
+  text-transform: uppercase;
+}
+
+.calendar {
+  width: 100%;
+  table-layout: fixed;
+  border-collapse: collapse;
+}
+
+.calendar th {
+  padding-bottom: var(--spacing);
+  font-size: var(--font-size-small);
   font-weight: 700;
 }
 
-#date-range input {
-  color-scheme: light;
+.calendar td {
+  padding: 0;
+  text-align: center;
 }
 
-#date-range button {
+.calendar button {
+  width: 100%;
+  height: var(--control-size);
+  border: var(--border-width) solid transparent;
+  background: none;
+  color: var(--color-text);
+  font: inherit;
+  cursor: pointer;
+}
+
+.calendar button:hover:not(:disabled) {
+  border-color: var(--color-border);
+}
+
+.calendar button:disabled {
+  color: var(--color-fade);
+  cursor: default;
+}
+
+.calendar button.is-today {
+  border-color: var(--color-border);
+  font-weight: 700;
+}
+
+.calendar button.is-between {
+  background: var(--color-tape);
+}
+
+.calendar button.is-end {
+  background: var(--color-text);
+  color: var(--color-panel);
+  font-weight: 700;
+}
+
+.calendar-hint {
+  margin: 0;
+  font-size: var(--font-size-small);
+}
+
+#date-range .calendar-done {
   min-height: var(--control-size);
   border: var(--border-width) solid var(--color-border);
   background: var(--color-panel);
@@ -174,12 +251,13 @@ body {
   cursor: pointer;
 }
 
-/* Beside the search box, so it never overlaps the side panel below it. */
+/* Directly under the filters. Open dropdowns draw over it. */
 #filter-summary {
   position: fixed;
-  top: var(--gutter);
-  left: calc(var(--gutter) * 2 + var(--panel-width));
-  max-width: calc(100% - var(--panel-width) - 3 * var(--gutter));
+  top: calc(var(--gutter) + var(--control-size) * 2 + var(--spacing) * 2);
+  right: var(--gutter);
+  width: var(--panel-width);
+  max-width: calc(100% - 2 * var(--gutter));
   padding: var(--spacing);
   border: var(--border-width) solid var(--color-border);
   background: var(--color-tape);
@@ -221,11 +299,11 @@ body {
 
 #side-panel {
   position: fixed;
-  top: calc(var(--gutter) * 2 + var(--control-size) * 2 + var(--spacing) + var(--edge-size));
+  top: calc(var(--gutter) + var(--edge-size));
   left: var(--gutter);
   width: var(--panel-width);
   max-width: calc(100% - 2 * var(--gutter));
-  max-height: calc(100% - var(--control-size) * 4);
+  max-height: calc(100% - var(--gutter) * 2 - var(--edge-size));
   overflow-y: auto;
   padding: var(--gutter);
   background: var(--color-panel);
@@ -237,7 +315,7 @@ body {
 /* A zig-zag torn top edge, drawn just above the panel. */
 #side-panel-edge {
   position: fixed;
-  top: calc(var(--gutter) * 2 + var(--control-size) * 2 + var(--spacing));
+  top: var(--gutter);
   left: var(--gutter);
   width: var(--panel-width);
   max-width: calc(100% - 2 * var(--gutter));
@@ -387,7 +465,9 @@ body {
 
 #search input:focus-visible,
 .dropdown-button:focus-visible,
-#date-range button:focus-visible,
+.calendar button:focus-visible,
+.calendar-header button:focus-visible,
+.calendar-done:focus-visible,
 #side-panel button:focus-visible {
   outline: var(--border-width) solid var(--color-accent);
   outline-offset: calc(var(--border-width) * -1);
@@ -439,7 +519,7 @@ body {
 
 #status {
   position: fixed;
-  top: calc(var(--gutter) * 2 + var(--control-size) * 2 + var(--spacing));
+  top: var(--gutter);
   left: var(--gutter);
   max-width: calc(100% - 2 * var(--gutter));
   padding: var(--spacing);
@@ -467,7 +547,16 @@ body {
 }
 
 /* On phones the panel becomes a bottom sheet above the attribution, and the controls move up top. */
-@media (max-width: 640px) {
+@media (max-width: 760px) {
+  #search {
+    left: var(--gutter);
+    width: auto;
+  }
+
+  #status {
+    top: calc(var(--gutter) * 2 + var(--control-size) * 2 + var(--spacing));
+  }
+
   #side-panel {
     top: auto;
     bottom: var(--controls-bottom);
@@ -484,6 +573,8 @@ body {
   #filter-summary {
     top: calc(var(--gutter) * 3 + var(--control-size) * 3 + var(--spacing));
     left: var(--gutter);
+    right: auto;
+    width: auto;
     max-width: calc(100% - 2 * var(--gutter));
   }
 

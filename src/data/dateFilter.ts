@@ -49,3 +49,38 @@ export function dateFilterLabel(filter: DateFilter, today: string): string {
   }
   return 'Any date';
 }
+
+/** One month of a calendar: rows of seven days, Sunday first, with null for days outside the month. */
+export function monthGrid(year: number, month: number): (string | null)[][] {
+  const pad = (value: number) => String(value).padStart(2, '0');
+  const firstWeekday = new Date(Date.UTC(year, month - 1, 1)).getUTCDay();
+  const dayCount = new Date(Date.UTC(year, month, 0)).getUTCDate();
+  const cells: (string | null)[] = Array.from({ length: firstWeekday }, () => null);
+  for (let day = 1; day <= dayCount; day++) cells.push(`${year}-${pad(month)}-${pad(day)}`);
+  while (cells.length % 7 !== 0) cells.push(null);
+  return Array.from({ length: cells.length / 7 }, (_, row) => cells.slice(row * 7, row * 7 + 7));
+}
+
+/** "December 2026". */
+export function monthLabel(year: number, month: number): string {
+  return new Date(Date.UTC(year, month - 1, 1)).toLocaleDateString('en-CA', { month: 'long', year: 'numeric', timeZone: 'UTC' });
+}
+
+/** A date in words, for screen readers: "Tuesday, December 1, 2026". */
+export function fullDateLabel(date: string): string {
+  const [year, month, day] = date.split('-').map(Number) as [number, number, number];
+  return new Date(Date.UTC(year, month - 1, day)).toLocaleDateString('en-CA', {
+    weekday: 'long',
+    month: 'long',
+    day: 'numeric',
+    year: 'numeric',
+    timeZone: 'UTC',
+  });
+}
+
+/** Clicking a date: the first click starts a range, the second finishes it, and a third starts over. */
+export function nextRange(range: DateRange, clicked: string): DateRange {
+  const { from, to } = range;
+  if (!from || to) return { from: clicked, to: null };
+  return clicked < from ? { from: clicked, to: from } : { from, to: clicked };
+}

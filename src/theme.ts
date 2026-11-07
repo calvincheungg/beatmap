@@ -38,6 +38,7 @@ export const theme = {
       text: palette.ink,
       accent: palette.risoRed,
       tape: palette.risoYellow,
+      fade: palette.fade,
     },
     fontFamily: "'Space Mono', 'IBM Plex Mono', monospace",
     displayFontFamily: "'Anton', 'Bebas Neue', sans-serif",
