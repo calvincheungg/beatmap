@@ -71,7 +71,7 @@ Upcoming events come from Ticketmaster's Discovery API and are stored in Supabas
 
 To set it up:
 
-1. Run [supabase/schema.sql](supabase/schema.sql) in the Supabase SQL editor. It's safe to run again after it changes.
+1. Apply the database migrations (see [Database changes](#database-changes)).
 2. Fill in `.env` from [.env.example](.env.example). `VITE_` values also go in your host's environment settings.
 3. Add `TICKETMASTER_API_KEY`, `SUPABASE_URL` and `SUPABASE_SERVICE_KEY` as GitHub repository secrets.
 
@@ -84,6 +84,24 @@ npm run data:events
 Genres come from Ticketmaster too. Search finds genres and sub-genres, and the genre and date filters limit the map and panel to matching shows. Choosing a main genre like Rock includes its sub-genres, like Punk. Placeholder labels like "Other" count as no genre.
 
 Each sync removes upcoming events no longer listed, and deletes events more than 30 days past. A show's `timing` (`upcoming` or `over`) comes from the `events_with_timing` view rather than being stored.
+
+### Database changes
+
+Every database change is a numbered file in [supabase/migrations](supabase/migrations), so the history can be replayed on a new project. Don't edit the database in the Supabase dashboard, and don't change a migration once it's applied. Add a new one instead:
+
+```bash
+npm run db:new -- add_profiles    # creates an empty migration to fill in
+npm run db:push                   # applies new migrations to the linked project
+```
+
+To connect this folder to a project once:
+
+```bash
+npx supabase@latest login
+npx supabase@latest link --project-ref your-project-ref
+```
+
+For a brand new project, `npm run db:push` applies everything. A test requires row level security on every table, because tables without it can be exposed to the public key.
 
 ### Building heights
 

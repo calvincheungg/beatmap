@@ -12,7 +12,9 @@
     "test": "vitest run",
     "data:fetch": "bash scripts/fetch-data.sh",
     "data:geocode": "node scripts/geocode-venues.ts",
-    "data:events": "node --env-file-if-exists=.env scripts/fetch-events.ts"
+    "data:events": "node --env-file-if-exists=.env scripts/fetch-events.ts",
+    "db:new": "npx supabase@latest migration new",
+    "db:push": "npx supabase@latest db push"
   },
   "dependencies": {
     "maplibre-gl": "^6.16.0",

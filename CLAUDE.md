@@ -22,6 +22,8 @@ npm run data:fetch               # regenerate public/data/gta.pmtiles (needs pmt
 npm run data:fetch -- downtown   # downtown extract only
 npm run data:geocode             # fill in lat/lon for new venues in the CSV
 npm run data:events              # sync Ticketmaster events to Supabase (needs secrets in .env)
+npm run db:new -- name           # create a database migration
+npm run db:push                  # apply new migrations to the linked project
 ```
 
 ## Architecture
@@ -40,7 +42,7 @@ npm run data:events              # sync Ticketmaster events to Supabase (needs s
 | `src/data/ticketmaster.ts` | Ticketmaster fetching and venue matching, used by `scripts/fetch-events.ts` |
 | `src/data/eventStore.ts` | Saves events to Supabase and enforces the 30 day retention. Script only |
 | `src/data/events.ts` | Loads events from Supabase and formats them for the side panel |
-| `supabase/schema.sql` | Database tables, read-only access rules and the `events_with_timing` view |
+| `supabase/migrations/` | Every database change, in order. Never edit one that's applied; add a new one |
 | `src/theme.ts` | All colours, fonts and sizes |
 | `src/config.ts` | Map boundary, starting point, data URL |
 | `tests/` | Unit tests |

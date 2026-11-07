@@ -1,4 +1,5 @@
--- Run in the Supabase SQL editor. Safe to run again: existing data is kept, and new columns are added.
+-- The starting point: events, read-only public access and the timing view.
+-- This matches what's already in production, where it's marked as applied rather than run.
 -- Visitors can only read. Only the service key, used by the GitHub Action, can write.
 
 create table if not exists public.events (
