@@ -201,6 +201,8 @@ export interface ShowEvent {
 
 /** Labels too vague to filter by. */
 const PLACEHOLDER_GENRES = new Set(['other', 'undefined', 'music', '']);
+/** Sub-genres Ticketmaster applies too broadly to trust. Amapiano is on most Dance/Electronic shows. */
+const UNRELIABLE_SUB_GENRES = new Set(['amapiano', 'urban']);
 /** Different labels for the same genre. */
 const GENRE_ALIASES: Record<string, string> = { Dance: 'Dance/Electronic' };
 
@@ -216,7 +218,8 @@ function primaryGenres(event: ApiEvent): { genre: string | null; subGenre: strin
   const genre = cleanGenre(primary?.genre?.name);
   const subGenre = cleanGenre(primary?.subGenre?.name);
   // Sub-genres often just repeat the genre.
-  return { genre, subGenre: subGenre === genre ? null : subGenre };
+  const isUseful = subGenre !== genre && !UNRELIABLE_SUB_GENRES.has(subGenre?.toLowerCase() ?? '');
+  return { genre, subGenre: isUseful ? subGenre : null };
 }
 
 export interface CoverageReport {

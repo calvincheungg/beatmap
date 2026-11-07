@@ -120,11 +120,13 @@ describe('toShowEvents', () => {
         event('vague', { classifications: [{ primary: true, genre: { name: 'Other' }, subGenre: { name: 'undefined' } }] }),
         event('repeat', { classifications: [{ genre: { name: 'Jazz' }, subGenre: { name: 'Jazz' } }] }),
         event('none', { classifications: [] }),
+        event('amapiano', { classifications: [{ primary: true, genre: { name: 'Dance/Electronic' }, subGenre: { name: 'Amapiano' } }] }),
+        event('urban', { classifications: [{ primary: true, genre: { name: 'Hip-Hop/Rap' }, subGenre: { name: 'Urban' } }] }),
       ],
       venues,
     );
     const genres = Object.fromEntries(report.events.map((show) => [show.id, [show.genre, show.subGenre]]));
-    expect(genres).toEqual({ primary: ['Pop', 'K-Pop'], vague: [null, null], repeat: ['Jazz', null], none: [null, null] });
+    expect(genres).toEqual({ primary: ['Pop', 'K-Pop'], vague: [null, null], repeat: ['Jazz', null], none: [null, null], amapiano: ['Dance/Electronic', null], urban: ['Hip-Hop/Rap', null] });
   });
 
   it('sorts by date and time', () => {
