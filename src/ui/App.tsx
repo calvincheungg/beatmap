@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { EVENTS_URL } from '../config';
+import { SUPABASE_PUBLISHABLE_KEY, SUPABASE_URL } from '../config';
 import { loadEvents } from '../data/events';
 import { MapView } from '../scene/MapView';
 import { useMapStore } from '../state/mapStore';
@@ -11,7 +11,7 @@ import { SidePanel } from './SidePanel';
 
 export function App() {
   useEffect(() => {
-    void loadEvents(EVENTS_URL).then((events) => useMapStore.getState().setEvents(events));
+    void loadEvents(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY).then((events) => useMapStore.getState().setEvents(events));
   }, []);
 
   return (

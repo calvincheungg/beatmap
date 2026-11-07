@@ -5,7 +5,7 @@ A web app showing Toronto/GTA live music events on a stylized isometric 3D map.
 Current phase: map only, with mock venue pins (pins not built yet). Milestones 1 to 3 are done, rebuilt on MapLibre.
 
 ## Stack
-- Vite, React, TypeScript (strict), MapLibre GL JS, PMTiles, Zustand, Vitest.
+- Vite, React, TypeScript (strict), MapLibre GL JS, PMTiles, Zustand, Supabase, Vitest.
 - TypeScript is pinned to 6.0 because `typescript-eslint` doesn't support 7 yet.
 - Map data: OpenStreetMap only, never Google Maps data or tiles. Protomaps builds
   also contain Natural Earth data, so don't add layers or zooms that rely on it.
@@ -21,7 +21,7 @@ npm test                         # unit tests (Vitest)
 npm run data:fetch               # regenerate public/data/gta.pmtiles (needs pmtiles CLI)
 npm run data:fetch -- downtown   # downtown extract only
 npm run data:geocode             # fill in lat/lon for new venues in the CSV
-npm run data:events              # fetch Ticketmaster events (needs TICKETMASTER_API_KEY in .env)
+npm run data:events              # sync Ticketmaster events to Supabase (needs secrets in .env)
 ```
 
 ## Architecture
@@ -38,11 +38,15 @@ npm run data:events              # fetch Ticketmaster events (needs TICKETMASTER
 | `src/data/toronto_music_venues.csv` | The only venue list. The app reads it directly |
 | `src/data/` | Venue and neighbourhood loaders; `neighbourhoods.json` is the base search list |
 | `src/data/ticketmaster.ts` | Ticketmaster fetching and venue matching, used by `scripts/fetch-events.ts` |
-| `src/data/events.ts` | Loads and formats events for the side panel |
+| `src/data/eventStore.ts` | Saves events to Supabase and enforces the 30 day retention. Script only |
+| `src/data/events.ts` | Loads events from Supabase and formats them for the side panel |
+| `supabase/schema.sql` | Database tables, read-only access rules and the `events_with_timing` view |
 | `src/theme.ts` | All colours, fonts and sizes |
 | `src/config.ts` | Map boundary, starting point, data URL |
 | `tests/` | Unit tests |
 | `scripts/fetch-data.sh` | Generates map extracts |
+
+GitHub Actions syncs events to Supabase every 6 hours (`.github/workflows/refresh-events.yml`). Never expose the service key or Ticketmaster key to the browser: only `VITE_` values reach it, and every table needs row level security.
 
 Heights come from the tiles (`levels × 3 + 2` m); buildings with no height get 7 m.
 

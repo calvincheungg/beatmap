@@ -3,7 +3,7 @@ import {
   formatShowDate,
   formatShowTime,
   loadEvents,
-  parseEventsFile,
+  parseEventRows,
   showStatusLabel,
   todayString,
   upcomingShows,
@@ -20,32 +20,91 @@ const show = (id: string, venueId: string, date: string): ShowEvent => ({
   venueId,
 });
 
-describe('parseEventsFile', () => {
-  it('keeps valid events and drops malformed or unsafe ones', () => {
-    const good = show('a', 'v', '2026-12-01');
-    const parsed = parseEventsFile({
-      events: [good, { ...good, id: 'bad-link', url: 'javascript:alert(1)' }, { ...good, id: 'bad-date', date: 'soon' }, { id: 'partial' }],
-    });
-    expect(parsed).toEqual([good]);
+const row = (id: string, overrides: Record<string, unknown> = {}) => ({
+  source: 'ticketmaster',
+  source_id: id,
+  venue_id: 'v',
+  name: id,
+  local_date: '2026-12-01',
+  local_time: '20:00:00',
+  status: 'onsale',
+  url: `https://www.ticketmaster.ca/event/${id}`,
+  ...overrides,
+});
+
+describe('parseEventRows', () => {
+  it('maps a row to an event', () => {
+    expect(parseEventRows([row('a')])).toEqual([
+      {
+        id: 'ticketmaster:a',
+        name: 'a',
+        date: '2026-12-01',
+        time: '20:00:00',
+        status: 'onsale',
+        url: 'https://www.ticketmaster.ca/event/a',
+        venueId: 'v',
+      },
+    ]);
   });
 
-  it('rejects anything that is not an events file', () => {
-    expect(() => parseEventsFile({})).toThrow();
-    expect(() => parseEventsFile(null)).toThrow();
+  it('drops malformed rows and unsafe links', () => {
+    const rows = [row('good'), row('link', { url: 'javascript:alert(1)' }), row('date', { local_date: 'soon' }), { source_id: 'partial' }];
+    expect(parseEventRows(rows).map((event) => event.name)).toEqual(['good']);
+  });
+
+  it('allows a missing time', () => {
+    expect(parseEventRows([row('a', { local_time: null })])[0]?.time).toBeNull();
+  });
+
+  it('rejects anything that is not a list', () => {
+    expect(() => parseEventRows({})).toThrow();
   });
 });
 
 describe('loadEvents', () => {
-  it('returns events from a good response', async () => {
-    const fetcher = (async () => new Response(JSON.stringify({ events: [show('a', 'v', '2026-12-01')] }))) as unknown as typeof fetch;
-    expect(await loadEvents('/x', fetcher)).toHaveLength(1);
+  it('returns null without configuration, and makes no request', async () => {
+    let called = false;
+    const fetcher = (async () => {
+      called = true;
+      return new Response('[]');
+    }) as unknown as typeof fetch;
+    expect(await loadEvents(undefined, 'key', fetcher)).toBeNull();
+    expect(called).toBe(false);
   });
 
-  it('returns null when the file is missing, as HTML or as a 404', async () => {
-    const html = (async () => new Response('<!doctype html>')) as unknown as typeof fetch;
-    const missing = (async () => new Response('', { status: 404 })) as unknown as typeof fetch;
-    expect(await loadEvents('/x', html)).toBeNull();
-    expect(await loadEvents('/x', missing)).toBeNull();
+  it('asks only for upcoming events from the view, with the public key', async () => {
+    let requested: URL | undefined;
+    let headers: Record<string, string> = {};
+    const fetcher = (async (input: string, init: RequestInit) => {
+      requested = new URL(input);
+      headers = init.headers as Record<string, string>;
+      return new Response(JSON.stringify([row('a')]));
+    }) as unknown as typeof fetch;
+    expect(await loadEvents('https://x.supabase.co/', 'sb_publishable_abc', fetcher)).toHaveLength(1);
+    expect(requested?.pathname).toBe('/rest/v1/events_with_timing');
+    expect(requested?.searchParams.get('timing')).toBe('eq.upcoming');
+    expect(headers).toEqual({ apikey: 'sb_publishable_abc' });
+  });
+
+  it('reads every page', async () => {
+    const offsets: string[] = [];
+    const fetcher = (async (input: string) => {
+      const offset = new URL(input).searchParams.get('offset')!;
+      offsets.push(offset);
+      const count = offset === '0' ? 1000 : 3;
+      return new Response(JSON.stringify(Array.from({ length: count }, (_, i) => row(`${offset}-${i}`))));
+    }) as unknown as typeof fetch;
+    expect(await loadEvents('https://x.supabase.co', 'key', fetcher)).toHaveLength(1003);
+    expect(offsets).toEqual(['0', '1000']);
+  });
+
+  it('returns null on errors', async () => {
+    const denied = (async () => new Response('{}', { status: 401 })) as unknown as typeof fetch;
+    const offline = (async () => {
+      throw new Error('offline');
+    }) as unknown as typeof fetch;
+    expect(await loadEvents('https://x.supabase.co', 'key', denied)).toBeNull();
+    expect(await loadEvents('https://x.supabase.co', 'key', offline)).toBeNull();
   });
 });
 

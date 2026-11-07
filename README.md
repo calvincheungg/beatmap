@@ -67,13 +67,21 @@ This uses OpenStreetMap's Nominatim service and only touches rows missing coordi
 
 ### Events
 
-Upcoming events come from Ticketmaster's Discovery API. Get a free key at <https://developer.ticketmaster.com>, add it to `.env` as `TICKETMASTER_API_KEY`, then run:
+Upcoming events come from Ticketmaster's Discovery API and are stored in Supabase. The app reads them directly, so new events appear without a deploy. Without Supabase configured, the app still runs, just without listings.
+
+To set it up:
+
+1. Run [supabase/schema.sql](supabase/schema.sql) once in the Supabase SQL editor.
+2. Fill in `.env` from [.env.example](.env.example). `VITE_` values also go in your host's environment settings.
+3. Add `TICKETMASTER_API_KEY`, `SUPABASE_URL` and `SUPABASE_SERVICE_KEY` as GitHub repository secrets.
+
+[.github/workflows/refresh-events.yml](.github/workflows/refresh-events.yml) then syncs every 6 hours. To sync by hand:
 
 ```bash
 npm run data:events
 ```
 
-This writes `public/data/events.json`, which isn't committed, and reports which venues have events. The key is only used by this script and never reaches the browser. The app reads that file to list shows in the side panel and mark venues with upcoming shows in red. Without it, the app still runs, just without listings. Ticketmaster's terms limit how long event data can be stored, so refresh it regularly.
+Each sync removes upcoming events no longer listed, and deletes events more than 30 days past. A show's `timing` (`upcoming` or `over`) comes from the `events_with_timing` view rather than being stored.
 
 ### Building heights
 

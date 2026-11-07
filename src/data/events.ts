@@ -2,30 +2,71 @@ import type { ShowEvent } from './ticketmaster.ts';
 
 export type { ShowEvent };
 
-/** Reads the file written by scripts/fetch-events.ts, dropping anything malformed or with an unsafe link. */
-export function parseEventsFile(data: unknown): ShowEvent[] {
-  const events = (data as { events?: unknown } | null)?.events;
-  if (!Array.isArray(events)) throw new Error('Not an events file');
-  return (events as Partial<ShowEvent>[]).filter(
-    (event): event is ShowEvent =>
-      typeof event.id === 'string' &&
-      typeof event.name === 'string' &&
-      typeof event.venueId === 'string' &&
-      typeof event.date === 'string' &&
-      /^\d{4}-\d{2}-\d{2}$/.test(event.date) &&
-      typeof event.url === 'string' &&
-      /^https?:\/\//i.test(event.url),
-  );
+/** Rows per request. Supabase returns at most 1000 at a time by default. */
+const PAGE_SIZE = 1000;
+/** A limit so a bad response can't loop forever. */
+const MAX_PAGES = 20;
+
+/** Turns database rows into events, dropping anything malformed or with an unsafe link. */
+export function parseEventRows(rows: unknown): ShowEvent[] {
+  if (!Array.isArray(rows)) throw new Error('Expected a list of events');
+  return (rows as Record<string, unknown>[]).flatMap((row): ShowEvent[] => {
+    const { source, source_id: sourceId, name, local_date: date, local_time: time, status, url, venue_id: venueId } = row;
+    if (
+      typeof source !== 'string' ||
+      typeof sourceId !== 'string' ||
+      typeof name !== 'string' ||
+      typeof venueId !== 'string' ||
+      typeof date !== 'string' ||
+      !/^\d{4}-\d{2}-\d{2}$/.test(date) ||
+      typeof url !== 'string' ||
+      !/^https?:\/\//i.test(url)
+    ) {
+      return [];
+    }
+    return [
+      {
+        id: `${source}:${sourceId}`,
+        name,
+        date,
+        time: typeof time === 'string' ? time : null,
+        status: typeof status === 'string' ? status : 'unknown',
+        url,
+        venueId,
+      },
+    ];
+  });
 }
 
-/** Loads events for the app. The file is optional, so failure means the app runs without listings. */
-export async function loadEvents(url: string, fetcher: typeof fetch = fetch): Promise<ShowEvent[] | null> {
+/** Loads upcoming events. Listings are optional, so any failure means the app runs without them. */
+export async function loadEvents(
+  url: string | undefined,
+  publicKey: string | undefined,
+  fetcher: typeof fetch = fetch,
+): Promise<ShowEvent[] | null> {
+  if (!url || !publicKey) return null;
+  // Supabase's newer `sb_` keys go only in the apikey header. Older JWT keys need both.
+  const headers: Record<string, string> = publicKey.startsWith('sb_')
+    ? { apikey: publicKey }
+    : { apikey: publicKey, Authorization: `Bearer ${publicKey}` };
+  const events: ShowEvent[] = [];
   try {
-    const response = await fetcher(url);
-    if (!response.ok) return null;
-    return parseEventsFile(await response.json());
+    for (let page = 0; page < MAX_PAGES; page++) {
+      const params = new URLSearchParams({
+        select: 'source,source_id,venue_id,name,local_date,local_time,status,url',
+        timing: 'eq.upcoming',
+        order: 'local_date.asc,local_time.asc,source_id.asc',
+        limit: String(PAGE_SIZE),
+        offset: String(page * PAGE_SIZE),
+      });
+      const response = await fetcher(`${url.replace(/\/$/, '')}/rest/v1/events_with_timing?${params}`, { headers });
+      if (!response.ok) return null;
+      const rows: unknown = await response.json();
+      events.push(...parseEventRows(rows));
+      if ((rows as unknown[]).length < PAGE_SIZE) break;
+    }
+    return events;
   } catch {
-    // Dev servers answer a missing file with HTML, which fails to parse.
     return null;
   }
 }
