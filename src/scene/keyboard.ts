@@ -1,6 +1,9 @@
 import { useMapStore } from '../state/mapStore';
 
-/** Q and E rotate, F switches to the flat map, L toggles names. Returns a function that removes the listener. */
+/**
+ * Q and E rotate, F switches to the flat map, L toggles names and N switches night and day.
+ * Returns a function that removes the listener.
+ */
 export function attachKeyboard(): () => void {
   const onKeyDown = (event: KeyboardEvent) => {
     const inList = event.target instanceof Element && event.target.closest('[role="listbox"], #date-range');
@@ -11,6 +14,7 @@ export function attachKeyboard(): () => void {
     else if (key === 'e') store.rotate(1);
     else if (key === 'f') store.toggleFlat();
     else if (key === 'l') store.toggleLabels();
+    else if (key === 'n') store.toggleMapMode();
   };
   window.addEventListener('keydown', onKeyDown);
   return () => window.removeEventListener('keydown', onKeyDown);

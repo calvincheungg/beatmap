@@ -1,0 +1,29 @@
+# Saves show listings from venues' own box offices to Supabase once a day. Run it by hand from the Actions tab too.
+# Once a day keeps requests to each venue's site low. Needs the SUPABASE_URL and SUPABASE_SERVICE_KEY repository secrets.
+name: Refresh venue box offices
+
+on:
+  schedule:
+    # Off the hour, because GitHub delays scheduled runs most at the top of the hour.
+    - cron: '43 9 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Fetch venue listings and save them to Supabase
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          # Optional: venues on Eventbrite are skipped without it.
+          EVENTBRITE_TOKEN: ${{ secrets.EVENTBRITE_TOKEN }}
+        run: node scripts/fetch-venues.ts

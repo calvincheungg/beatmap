@@ -3,7 +3,7 @@ import { ANY_DATE, dateRangeFor, type DateFilter } from '../data/dateFilter';
 import { matchesFilter, type AgeFilter, type ShowEvent, type ShowFilter } from '../data/events';
 import type { Neighbourhood } from '../data/neighbourhoods';
 import type { Venue } from '../data/venues';
-import { theme } from '../theme';
+import { theme, type MapMode } from '../theme';
 
 /** Where the camera should fly. A new object starts a new flight. */
 export interface FlyRequest {
@@ -20,6 +20,8 @@ export interface MapState {
   /** True for the top-down map, false for the isometric view. */
   flat: boolean;
   showLabels: boolean;
+  /** The map's colours: dark land at night, paper by day. */
+  mapMode: MapMode;
   flyRequest: FlyRequest | null;
   /** The neighbourhood shown in the side panel. The panel is closed when null. */
   selectedNeighbourhoodId: string | null;
@@ -40,6 +42,7 @@ export interface MapState {
   rotate: (steps: number) => void;
   toggleFlat: () => void;
   toggleLabels: () => void;
+  toggleMapMode: () => void;
   selectNeighbourhood: (neighbourhood: Neighbourhood) => void;
   /** Opens the panel on a venue. Flying is optional, because a clicked pin is already in view. */
   selectVenue: (venue: Venue, options?: { fly: boolean }) => void;
@@ -59,6 +62,7 @@ export const useMapStore = create<MapState>()((set) => ({
   rotationSteps: 0,
   flat: false,
   showLabels: true,
+  mapMode: 'night',
   flyRequest: null,
   selectedNeighbourhoodId: null,
   selectedVenueId: null,
@@ -74,6 +78,7 @@ export const useMapStore = create<MapState>()((set) => ({
   rotate: (steps) => set((state) => ({ rotationSteps: state.rotationSteps + steps })),
   toggleFlat: () => set((state) => ({ flat: !state.flat })),
   toggleLabels: () => set((state) => ({ showLabels: !state.showLabels })),
+  toggleMapMode: () => set((state) => ({ mapMode: state.mapMode === 'night' ? 'day' : 'night' })),
   selectNeighbourhood: ({ id, lat, lon, zoom }) =>
     set({ selectedNeighbourhoodId: id, selectedVenueId: null, highlightedShowId: null, flyRequest: { lat, lon, zoom } }),
   selectVenue: ({ id, lat, lon, neighbourhood }, { fly } = { fly: true }) =>

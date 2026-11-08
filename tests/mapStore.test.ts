@@ -8,6 +8,7 @@ describe('mapStore', () => {
       rotationSteps: 0,
       flat: false,
       showLabels: true,
+      mapMode: 'night',
       flyRequest: null,
       selectedNeighbourhoodId: null,
       selectedVenueId: null,
@@ -76,11 +77,14 @@ describe('mapStore', () => {
       venueId: 'v',
       genre: 'Rock',
       subGenre: null,
+      category: 'Music',
       artists: [],
       priceMin: null,
       priceMax: null,
       currency: null,
       ageLabel: null,
+      imageUrl: null,
+      firstSeenAt: null,
     };
 
     it('opens the venue and marks the show', () => {
@@ -113,6 +117,14 @@ describe('mapStore', () => {
   it('toggles place names', () => {
     useMapStore.getState().toggleLabels();
     expect(useMapStore.getState().showLabels).toBe(false);
+  });
+
+  it('starts at night and switches between night and day', () => {
+    expect(useMapStore.getState().mapMode).toBe('night');
+    useMapStore.getState().toggleMapMode();
+    expect(useMapStore.getState().mapMode).toBe('day');
+    useMapStore.getState().toggleMapMode();
+    expect(useMapStore.getState().mapMode).toBe('night');
   });
 
   it('opens the panel and starts a flight when a neighbourhood is picked', () => {

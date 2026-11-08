@@ -1,7 +1,7 @@
 /** Saves events to Supabase through its REST API. Runs only in the sync script, using the service key. */
 import type { ShowEvent } from './ticketmaster.ts';
 
-const SOURCE = 'ticketmaster';
+const DEFAULT_SOURCE = 'ticketmaster';
 const BATCH_SIZE = 500;
 /** Past events are kept this long, then deleted. */
 export const RETENTION_DAYS = 30;
@@ -11,6 +11,8 @@ const MIN_SAFE_RATIO = 0.5;
 export interface StoreConfig {
   url: string;
   serviceKey: string;
+  /** Where the events came from, like "ticketmaster" or "audienceview:rhcentre". Each source is pruned separately. */
+  source?: string;
   fetcher?: typeof fetch;
 }
 
@@ -41,8 +43,20 @@ export interface SyncResult {
 }
 
 /** Saves events, removes upcoming ones no longer listed, and deletes those past the retention period. */
+/** Each stored show title's link for a source, so links found on earlier runs can be reused. */
+export async function storedLinks(config: StoreConfig): Promise<Map<string, string>> {
+  const fetcher = config.fetcher ?? fetch;
+  const params = new URLSearchParams({ select: 'name,url', source: `eq.${config.source ?? DEFAULT_SOURCE}` });
+  const response = await fetcher(`${config.url.replace(/\/$/, '')}/rest/v1/events?${params}`, { headers: authHeaders(config.serviceKey) });
+  // Headers hold the key, so errors include only the status.
+  if (!response.ok) throw new Error(`Supabase read failed (${response.status})`);
+  const rows = (await response.json()) as { name?: unknown; url?: unknown }[];
+  return new Map(rows.flatMap((row) => (typeof row.name === 'string' && typeof row.url === 'string' ? [[row.name, row.url] as const] : [])));
+}
+
 export async function syncEvents(events: ShowEvent[], runStart: Date, config: StoreConfig): Promise<SyncResult> {
   const fetcher = config.fetcher ?? fetch;
+  const source = config.source ?? DEFAULT_SOURCE;
   const base = `${config.url.replace(/\/$/, '')}/rest/v1/events`;
   const headers = { ...authHeaders(config.serviceKey), 'Content-Type': 'application/json' };
   const today = torontoDate(runStart);
@@ -54,7 +68,7 @@ export async function syncEvents(events: ShowEvent[], runStart: Date, config: St
     return response;
   };
 
-  const upcoming = new URLSearchParams({ select: 'source_id', source: `eq.${SOURCE}`, local_date: `gte.${today}`, limit: '1' });
+  const upcoming = new URLSearchParams({ select: 'source_id', source: `eq.${source}`, local_date: `gte.${today}`, limit: '1' });
   const counted = await check(
     await fetcher(`${base}?${upcoming}`, { headers: { ...headers, Prefer: 'count=exact' } }),
     'count',
@@ -63,7 +77,7 @@ export async function syncEvents(events: ShowEvent[], runStart: Date, config: St
 
   for (let start = 0; start < events.length; start += BATCH_SIZE) {
     const rows = events.slice(start, start + BATCH_SIZE).map((event) => ({
-      source: SOURCE,
+      source,
       source_id: event.id,
       venue_id: event.venueId,
       name: event.name,
@@ -73,11 +87,14 @@ export async function syncEvents(events: ShowEvent[], runStart: Date, config: St
       url: event.url,
       genre: event.genre,
       sub_genre: event.subGenre,
+      category: event.category,
       artists: event.artists,
       price_min: event.priceMin,
       price_max: event.priceMax,
       currency: event.currency,
       age_restriction: event.ageLabel,
+      image_url: event.imageUrl,
+      // first_seen_at is left out on purpose: the database sets it once, when a show is first saved.
       fetched_at: fetchedAt,
     }));
     await check(
@@ -90,14 +107,14 @@ export async function syncEvents(events: ShowEvent[], runStart: Date, config: St
     );
   }
 
-  // Cancelled and removed shows stop appearing in the fetch, so they're the ones left behind here.
+  // Removed shows stop appearing in the fetch, so they're the ones left behind here.
   const pruned = isSafeToPrune(events.length, stored);
   if (pruned) {
-    const stale = new URLSearchParams({ source: `eq.${SOURCE}`, local_date: `gte.${today}`, fetched_at: `lt.${fetchedAt}` });
+    const stale = new URLSearchParams({ source: `eq.${source}`, local_date: `gte.${today}`, fetched_at: `lt.${fetchedAt}` });
     await check(await fetcher(`${base}?${stale}`, { method: 'DELETE', headers }), 'remove unlisted');
   }
 
-  const expired = new URLSearchParams({ source: `eq.${SOURCE}`, local_date: `lt.${retentionCutoff(today)}` });
+  const expired = new URLSearchParams({ source: `eq.${source}`, local_date: `lt.${retentionCutoff(today)}` });
   await check(await fetcher(`${base}?${expired}`, { method: 'DELETE', headers }), 'remove expired');
 
   return { saved: events.length, pruned };

@@ -7,8 +7,10 @@ import {
   fetchMusicEvents,
   matchVenue,
   normalizeVenueName,
+  pickImage,
   toShowEvents,
   type ApiEvent,
+  type ApiImage,
 } from '../src/data/ticketmaster';
 
 const venues = [
@@ -44,6 +46,14 @@ describe('matchVenue', () => {
 
   it('rejects the same name somewhere else', () => {
     expect(matchVenue({ name: 'Horseshoe Tavern', location: at(44.5, -80.5) }, venues)).toBeNull();
+  });
+
+  it('trusts an exact multi-word name when the pin is kilometres off, but not a partial or far one', () => {
+    // Ticketmaster pins the Japanese Canadian Cultural Centre near Yonge and Steeles, 9.7 km away.
+    const jccc = [...venues, { id: 'jccc', name: 'Japanese Canadian Cultural Centre', lat: 43.726424, lon: -79.335052 }];
+    expect(matchVenue({ name: 'Japanese Canadian Cultural Centre', location: at(43.79278, -79.41319) }, jccc)?.id).toBe('jccc');
+    expect(matchVenue({ name: 'Japanese Canadian Cultural Centre Annex', location: at(43.79278, -79.41319) }, jccc)).toBeNull();
+    expect(matchVenue({ name: 'Elgin Theatre', location: at(43.2557, -79.8711) }, venues)).toBeNull();
   });
 
   it('matches by location alone when one venue is right there', () => {
@@ -94,22 +104,41 @@ describe('toShowEvents', () => {
         venueId: 'horseshoe',
         genre: 'Rock',
         subGenre: 'Hardcore Punk',
+        category: 'Music',
         artists: ['Headliner', 'Support Act'],
         priceMin: 24.92,
         priceMax: 24.92,
         currency: 'CAD',
         ageLabel: '19+',
+        imageUrl: null,
+        firstSeenAt: null,
       },
     ]);
     expect(report.matchedCounts.get('horseshoe')).toBe(1);
     expect(report.unmatchedVenues.get('Far Away Arena')).toBe(1);
   });
 
-  it('drops cancelled events, incomplete records and unsafe links, but keeps postponed ones', () => {
+  it('keeps cancelled events under one spelling', () => {
     const report = toShowEvents(
       [
         event('canceled', { dates: { start: { localDate: '2026-12-01' }, status: { code: 'canceled' } } }),
         event('cancelled', { dates: { start: { localDate: '2026-12-01' }, status: { code: 'cancelled' } } }),
+      ],
+      venues,
+    );
+    expect(report.events.map((show) => show.status)).toEqual(['cancelled', 'cancelled']);
+  });
+
+  it('picks a picture for each show', () => {
+    const images = [{ url: 'https://s1.ticketm.net/a_3_2.jpg', ratio: '3_2', width: 305 }];
+    expect(toShowEvents([event('pic', { images })], venues).events[0]?.imageUrl).toBe('https://s1.ticketm.net/a_3_2.jpg');
+  });
+
+  it('drops incomplete records, unsafe links and add-ons sold as listings, but keeps postponed ones', () => {
+    const report = toShowEvents(
+      [
+        event('chairs', { name: 'Lawn Chair Rental - Riley Green: Not A Show' }),
+        event('upgrade', { name: 'Syd - Early Entry VIP Upgrade' }),
         event('nodate', { dates: { status: { code: 'onsale' } } }),
         event('badlink', { url: 'javascript:alert(1)' }),
         event('moved', { dates: { start: { localDate: '2026-12-02' }, status: { code: 'postponed' } } }),
@@ -151,6 +180,28 @@ describe('toShowEvents', () => {
     const late = event('late', { dates: { start: { localDate: '2026-12-01', localTime: '22:00:00' } } });
     const early = event('early', { dates: { start: { localDate: '2026-12-01', localTime: '19:00:00' } } });
     expect(toShowEvents([later, late, early], venues).events.map((show) => show.id)).toEqual(['early', 'late', 'later']);
+  });
+});
+
+describe('pickImage', () => {
+  const image = (ratio: string, width: number, extra: Partial<ApiImage> = {}): ApiImage => ({
+    url: `https://s1.ticketm.net/${ratio}_${width}.jpg`,
+    ratio,
+    width,
+    ...extra,
+  });
+
+  it('prefers 3:2, then the smallest image that is wide enough', () => {
+    expect(pickImage([image('16_9', 640), image('3_2', 1024), image('3_2', 305), image('3_2', 200)])).toBe('https://s1.ticketm.net/3_2_305.jpg');
+    expect(pickImage([image('4_3', 305), image('16_9', 2048), image('16_9', 640), image('16_9', 205)])).toBe('https://s1.ticketm.net/16_9_640.jpg');
+  });
+
+  it('skips placeholders, insecure links and missing images', () => {
+    expect(pickImage([image('3_2', 305, { fallback: true })])).toBeNull();
+    expect(pickImage([image('3_2', 305, { url: 'http://s1.ticketm.net/a.jpg' })])).toBeNull();
+    expect(pickImage([image('3_2', 305, { url: undefined })])).toBeNull();
+    expect(pickImage([image('1_1', 640)])).toBeNull();
+    expect(pickImage(undefined)).toBeNull();
   });
 });
 
@@ -234,13 +285,16 @@ describe('fetchMusicEvents', () => {
 
     const events = await fetchMusicEvents({ ...base, fetcher });
     expect(events.map((event) => event.id)).toEqual(['a', 'b']);
-    expect(urls).toHaveLength(7);
+    // Two pages for the first month, then one for each of the other 12 months.
+    expect(urls).toHaveLength(14);
     const first = urls[0]!.searchParams;
     expect(first.get('classificationName')).toBe('music');
     expect(first.get('geoPoint')).toBe(encodeGeohash(43.735, -79.435));
     expect(first.get('unit')).toBe('km');
     expect(urls[1]!.searchParams.get('page')).toBe('1');
     expect(urls[2]!.searchParams.get('startDateTime')).toBe('2026-12-06T12:00:00Z');
+    // The last window starts 12 windows of 30 days later, so next summer's shows are included.
+    expect(urls.at(-1)!.searchParams.get('startDateTime')).toBe('2027-11-01T12:00:00Z');
   });
 
   it('stops at the deep paging limit and warns', async () => {
@@ -255,7 +309,7 @@ describe('fetchMusicEvents', () => {
     await fetchMusicEvents({ ...base, fetcher, onWarning: (message) => warnings.push(message) });
     expect(pages.slice(0, 5)).toEqual(['0', '1', '2', '3', '4']);
     expect(pages[5]).toBe('0');
-    expect(warnings).toHaveLength(6);
+    expect(warnings).toHaveLength(13);
   });
 
   it('never puts the key in an error message', async () => {

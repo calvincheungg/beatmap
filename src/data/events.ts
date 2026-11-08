@@ -23,11 +23,14 @@ export function parseEventRows(rows: unknown): ShowEvent[] {
       venue_id: venueId,
       genre,
       sub_genre: subGenre,
+      category,
       artists,
       price_min: priceMin,
       price_max: priceMax,
       currency,
       age_restriction: ageLabel,
+      image_url: imageUrl,
+      first_seen_at: firstSeenAt,
     } = row;
     if (
       typeof source !== 'string' ||
@@ -52,11 +55,15 @@ export function parseEventRows(rows: unknown): ShowEvent[] {
         venueId,
         genre: typeof genre === 'string' ? genre : null,
         subGenre: typeof subGenre === 'string' ? subGenre : null,
+        // Rows saved before categories existed all came from Ticketmaster's music listings.
+        category: typeof category === 'string' && category ? category : 'Music',
         artists: Array.isArray(artists) ? artists.filter((artist): artist is string => typeof artist === 'string') : [],
         priceMin: typeof priceMin === 'number' ? priceMin : null,
         priceMax: typeof priceMax === 'number' ? priceMax : null,
         currency: typeof currency === 'string' ? currency : null,
         ageLabel: typeof ageLabel === 'string' ? ageLabel : null,
+        imageUrl: typeof imageUrl === 'string' && /^https:\/\//i.test(imageUrl) ? imageUrl : null,
+        firstSeenAt: typeof firstSeenAt === 'string' && Number.isFinite(Date.parse(firstSeenAt)) ? firstSeenAt : null,
       },
     ];
   });
@@ -77,7 +84,9 @@ export async function loadEvents(
   try {
     for (let page = 0; page < MAX_PAGES; page++) {
       const params = new URLSearchParams({
-        select: 'source,source_id,venue_id,name,local_date,local_time,status,url,genre,sub_genre,artists,price_min,price_max,currency,age_restriction',
+        // Every column, rather than a list, so a deploy that lands before its migration still loads.
+        // parseEventRows treats any column that isn't there yet as unknown.
+        select: '*',
         timing: 'eq.upcoming',
         order: 'local_date.asc,local_time.asc,source_id.asc',
         limit: String(PAGE_SIZE),
@@ -130,7 +139,7 @@ export function isAdultsOnly(ageLabel: string | null): boolean {
  * age filters leave out shows whose listing doesn't give a price or age, since they can't be checked.
  */
 export function matchesFilter(event: ShowEvent, { genre, from, to, maxPrice, age }: ShowFilter): boolean {
-  if (genre !== null && event.genre !== genre && event.subGenre !== genre) return false;
+  if (genre !== null && event.genre !== genre && event.subGenre !== genre && event.category !== genre) return false;
   if (from !== null && event.date < from) return false;
   if (to !== null && event.date > to) return false;
   if (maxPrice !== null && (event.priceMin === null || event.priceMin > maxPrice)) return false;
@@ -143,9 +152,16 @@ export function upcomingShows(events: ShowEvent[], venueId: string, today: strin
   return events.filter((event) => event.venueId === venueId && event.date >= today && matchesFilter(event, filter));
 }
 
-/** Every show from today on that fits the filter. */
+export function isCancelled(event: Pick<ShowEvent, 'status'>): boolean {
+  return event.status === 'cancelled';
+}
+
+/**
+ * Every show from today on that fits the filter. Cancelled shows are left out, so they don't count
+ * towards pins, genres or totals. Only a venue's own list shows them.
+ */
 export function matchingShows(events: ShowEvent[], today: string, filter: ShowFilter = NO_FILTER): ShowEvent[] {
-  return events.filter((event) => event.date >= today && matchesFilter(event, filter));
+  return events.filter((event) => event.date >= today && !isCancelled(event) && matchesFilter(event, filter));
 }
 
 /** The venues with at least one upcoming show that fits the filter. */
@@ -165,6 +181,8 @@ function countBy(names: (string | null)[]): GenreCount[] {
 }
 
 export interface GenreOptions {
+  /** Music, Dance, Theatre and so on. Empty when every show is in one category, since there's nothing to choose. */
+  categories: GenreCount[];
   genres: GenreCount[];
   /** More specific tags like Punk. A name that's also a main genre appears only there. */
   subGenres: GenreCount[];
@@ -175,16 +193,21 @@ export function genreOptions(events: ShowEvent[], today: string, filter: ShowFil
   const shows = matchingShows(events, today, { ...filter, genre: null });
   const genres = countBy(shows.map((event) => event.genre));
   const mainNames = new Set(genres.map((item) => item.name));
-  return { genres, subGenres: countBy(shows.map((event) => event.subGenre)).filter((item) => !mainNames.has(item.name)) };
+  const categories = countBy(shows.map((event) => event.category));
+  return {
+    categories: categories.length > 1 ? categories : [],
+    genres,
+    subGenres: countBy(shows.map((event) => event.subGenre)).filter((item) => !mainNames.has(item.name)),
+  };
 }
 
-/** Genres and sub-genres matching a search, most shows first. An empty search finds nothing. */
+/** Categories, genres and sub-genres matching a search, most shows first. An empty search finds nothing. */
 export function searchGenres(query: string, events: ShowEvent[], today: string, filter: ShowFilter = NO_FILTER): GenreCount[] {
   const wanted = query.trim().toLowerCase();
   if (!wanted) return [];
-  const { genres, subGenres } = genreOptions(events, today, filter);
+  const { categories, genres, subGenres } = genreOptions(events, today, filter);
   const startsWith = (item: GenreCount) => (item.name.toLowerCase().startsWith(wanted) ? 0 : 1);
-  return [...genres, ...subGenres]
+  return [...categories, ...genres, ...subGenres]
     .filter((item) => item.name.toLowerCase().includes(wanted))
     .sort((a, b) => startsWith(a) - startsWith(b) || b.count - a.count);
 }
@@ -197,13 +220,13 @@ export interface ShowMatch {
   artist: string | null;
 }
 
-/** Upcoming shows by artist or title, regardless of filters. Names starting with the search come first, then soonest. */
+/** Upcoming shows by artist or title, regardless of filters, leaving out cancelled ones. Names starting with the search come first, then soonest. */
 export function searchShows(query: string, events: ShowEvent[], today: string, limit = MAX_SHOW_RESULTS): ShowMatch[] {
   const wanted = normalizeForSearch(query);
   if (wanted.length < MIN_SEARCH_LENGTH) return [];
   const ranked: { match: ShowMatch; rank: number }[] = [];
   for (const show of events) {
-    if (show.date < today) continue;
+    if (show.date < today || isCancelled(show)) continue;
     const artist = show.artists.find((name) => normalizeForSearch(name).includes(wanted)) ?? null;
     const title = normalizeForSearch(show.name);
     if (!artist && !title.includes(wanted)) continue;
@@ -252,13 +275,41 @@ export function priceLabel({ priceMin, priceMax, currency }: Pick<ShowEvent, 'pr
   return priceMax !== null && priceMax > priceMin ? `From ${price}` : price;
 }
 
-const STATUS_LABELS: Record<string, string> = {
-  rescheduled: 'Rescheduled',
-  postponed: 'Postponed',
-  offsale: 'Not on sale',
-};
-
-/** A label for shows that aren't simply on sale. */
+/** A note for shows that aren't on sale. Cancelled, rescheduled and postponed shows get stamps instead. */
 export function showStatusLabel(status: string): string | null {
-  return STATUS_LABELS[status] ?? null;
+  return status === 'offsale' ? 'Not on sale' : null;
+}
+
+export type StampKind = 'cancelled' | 'soldout' | 'rescheduled' | 'postponed' | 'new';
+
+export interface Stamp {
+  kind: StampKind;
+  label: string;
+}
+
+/** A show counts as just added for this long after a sync first sees it. */
+export const JUST_ADDED_DAYS = 3;
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+/** True if a sync first saw the show within the last few days. */
+export function isJustAdded(firstSeenAt: string | null, now: Date, days: number = JUST_ADDED_DAYS): boolean {
+  if (firstSeenAt === null) return false;
+  const seen = Date.parse(firstSeenAt);
+  return Number.isFinite(seen) && now.getTime() - seen < days * DAY_MS;
+}
+
+/** The rubber stamp for a show, if any. A change of plans beats being new. */
+export function showStamp(show: Pick<ShowEvent, 'status' | 'firstSeenAt'>, now: Date): Stamp | null {
+  if (isCancelled(show)) return { kind: 'cancelled', label: 'Cancelled' };
+  if (show.status === 'soldout') return { kind: 'soldout', label: 'Sold out' };
+  if (show.status === 'rescheduled') return { kind: 'rescheduled', label: 'Rescheduled' };
+  if (show.status === 'postponed') return { kind: 'postponed', label: 'Postponed' };
+  return isJustAdded(show.firstSeenAt, now) ? { kind: 'new', label: 'Just added' } : null;
+}
+
+/** A small tilt between -3 and 3 degrees that's the same for a show on every render. */
+export function stampTilt(id: string): number {
+  let hash = 0;
+  for (let i = 0; i < id.length; i++) hash = (hash * 31 + id.charCodeAt(i)) | 0;
+  return (Math.abs(hash) % 7) - 3;
 }

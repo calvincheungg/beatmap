@@ -5,7 +5,9 @@ import {
   formatShowTime,
   genreOptions,
   isAdultsOnly,
+  isCancelled,
   isFiltering,
+  isJustAdded,
   NO_FILTER,
   loadEvents,
   matchesFilter,
@@ -14,7 +16,9 @@ import {
   priceLabel,
   searchGenres,
   searchShows,
+  showStamp,
   showStatusLabel,
+  stampTilt,
   todayString,
   upcomingShows,
   venuesWithShows,
@@ -31,14 +35,17 @@ const show = (id: string, venueId: string, date: string, genre: string | null = 
   venueId,
   genre,
   subGenre,
+  category: 'Music',
   artists: [],
   priceMin: null,
   priceMax: null,
   currency: null,
   ageLabel: null,
+  imageUrl: null,
+  firstSeenAt: null,
 });
 
-const row = (id: string, overrides: Record<string, unknown> = {}) => ({
+const row =(id: string, overrides: Record<string, unknown> = {}) => ({
   source: 'ticketmaster',
   source_id: id,
   venue_id: 'v',
@@ -54,6 +61,8 @@ const row = (id: string, overrides: Record<string, unknown> = {}) => ({
   price_max: 40,
   currency: 'CAD',
   age_restriction: 'All ages',
+  image_url: 'https://s1.ticketm.net/dam/a/1.jpg',
+  first_seen_at: '2026-11-05T12:00:00+00:00',
   ...overrides,
 });
 
@@ -70,13 +79,22 @@ describe('parseEventRows', () => {
         venueId: 'v',
         genre: 'Rock',
         subGenre: 'Punk',
+        category: 'Music',
         artists: ['A Band'],
         priceMin: 25.5,
         priceMax: 40,
         currency: 'CAD',
         ageLabel: 'All ages',
+        imageUrl: 'https://s1.ticketm.net/dam/a/1.jpg',
+        firstSeenAt: '2026-11-05T12:00:00+00:00',
       },
     ]);
+  });
+
+  it('drops unsafe image links and unreadable first-seen times, keeping the show', () => {
+    const [parsed] = parseEventRows([row('a', { image_url: 'http://example.com/a.jpg', first_seen_at: 'yesterday' })]);
+    expect(parsed).toMatchObject({ imageUrl: null, firstSeenAt: null });
+    expect(parseEventRows([row('b', { image_url: null, first_seen_at: null })])[0]).toMatchObject({ imageUrl: null, firstSeenAt: null });
   });
 
   it('drops malformed rows and unsafe links', () => {
@@ -144,6 +162,55 @@ describe('upcomingShows', () => {
   it('keeps this venue from today on', () => {
     const events = [show('past', 'v', '2026-11-05'), show('today', 'v', '2026-11-06'), show('later', 'v', '2026-12-01'), show('other', 'w', '2026-12-01')];
     expect(upcomingShows(events, 'v', '2026-11-06').map((event) => event.id)).toEqual(['today', 'later']);
+  });
+});
+
+describe('cancelled shows', () => {
+  const today = '2026-11-06';
+  const cancelled: ShowEvent = { ...show('off', 'v', '2026-12-01', 'Rock'), status: 'cancelled', artists: ['Feist'] };
+  const events = [cancelled, show('on', 'w', '2026-12-02', 'Jazz')];
+
+  it("stay in the venue's own list", () => {
+    expect(isCancelled(cancelled)).toBe(true);
+    expect(upcomingShows(events, 'v', today).map((event) => event.id)).toEqual(['off']);
+  });
+
+  it("don't count for pins, totals, genres or search", () => {
+    expect(matchingShows(events, today).map((event) => event.id)).toEqual(['on']);
+    expect(venuesWithShows(events, today)).toEqual(new Set(['w']));
+    expect(genreOptions(events, today).genres.map((item) => item.name)).toEqual(['Jazz']);
+    expect(searchShows('feist', events, today)).toEqual([]);
+  });
+});
+
+
+describe('stamps', () => {
+  const now = new Date('2026-11-09T12:00:00Z');
+  const stampFor = (status: string, firstSeenAt: string | null = null) => showStamp({ status, firstSeenAt }, now)?.kind ?? null;
+
+  it('marks cancelled, sold out, rescheduled and postponed shows', () => {
+    expect(stampFor('cancelled')).toBe('cancelled');
+    expect(stampFor('soldout')).toBe('soldout');
+    expect(stampFor('rescheduled')).toBe('rescheduled');
+    expect(stampFor('postponed')).toBe('postponed');
+    expect(stampFor('onsale')).toBeNull();
+    expect(stampFor('offsale')).toBeNull();
+  });
+
+  it('marks shows first seen in the last three days', () => {
+    expect(stampFor('onsale', '2026-11-07T12:00:01Z')).toBe('new');
+    expect(stampFor('onsale', '2026-11-06T12:00:00Z')).toBeNull();
+    expect(stampFor('onsale', null)).toBeNull();
+    expect(isJustAdded('not a date', now)).toBe(false);
+  });
+
+  it('prefers a change of plans over being new', () => {
+    expect(stampFor('cancelled', '2026-11-09T00:00:00Z')).toBe('cancelled');
+  });
+
+  it('tilts each stamp the same way every time, within three degrees', () => {
+    expect(stampTilt('ticketmaster:abc')).toBe(stampTilt('ticketmaster:abc'));
+    for (const id of ['a', 'b', 'ticketmaster:rZ7HnEZ1Af18of', '']) expect(Math.abs(stampTilt(id))).toBeLessThanOrEqual(3);
   });
 });
 
@@ -217,8 +284,20 @@ describe('genres', () => {
     expect(venuesWithShows(events, today)).toEqual(new Set(['v', 'w']));
   });
 
+  it('offers categories only when there is more than one, and filters by them', () => {
+    const ballet: ShowEvent = { ...show('ballet', 'x', '2026-12-05'), category: 'Dance' };
+    const mixed = [...events, ballet];
+    expect(genreOptions(mixed, today).categories).toEqual([
+      { name: 'Music', count: 4 },
+      { name: 'Dance', count: 1 },
+    ]);
+    expect(matchingShows(mixed, today, genre('Dance')).map((event) => event.id)).toEqual(['ballet']);
+    expect(searchGenres('dan', mixed, today)).toEqual([{ name: 'Dance', count: 1 }]);
+  });
+
   it('lists main genres and sub-genres separately, most shows first', () => {
     expect(genreOptions(events, today)).toEqual({
+      categories: [],
       genres: [
         { name: 'Rock', count: 2 },
         { name: 'Pop', count: 1 },
@@ -313,8 +392,9 @@ describe('formatting', () => {
     expect(priceLabel({ priceMin: 50, priceMax: 50, currency: null })).toBe('$50');
   });
 
-  it('labels only unusual statuses', () => {
-    expect(showStatusLabel('rescheduled')).toBe('Rescheduled');
+  it('notes shows that are off sale, leaving other statuses to stamps', () => {
+    expect(showStatusLabel('offsale')).toBe('Not on sale');
+    expect(showStatusLabel('rescheduled')).toBeNull();
     expect(showStatusLabel('onsale')).toBeNull();
   });
 

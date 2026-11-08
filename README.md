@@ -75,7 +75,7 @@ To set it up:
 2. Fill in `.env` from [.env.example](.env.example). `VITE_` values also go in your host's environment settings.
 3. Add `TICKETMASTER_API_KEY`, `SUPABASE_URL` and `SUPABASE_SERVICE_KEY` as GitHub repository secrets.
 
-[.github/workflows/refresh-events.yml](.github/workflows/refresh-events.yml) then syncs every 6 hours. To sync by hand:
+[.github/workflows/refresh-events.yml](.github/workflows/refresh-events.yml) then syncs once a day. To sync by hand:
 
 ```bash
 npm run data:events

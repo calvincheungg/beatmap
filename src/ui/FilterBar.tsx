@@ -58,13 +58,14 @@ export function FilterBar() {
 
   const today = todayString();
   const filter = showFilterFrom({ selectedGenre: genre, dateFilter, priceFilter, ageFilter }, today);
-  const { genres, subGenres } = genreOptions(events, today, filter);
+  const { categories, genres, subGenres } = genreOptions(events, today, filter);
   const toItems = (list: typeof genres) => list.map(({ name, count }) => ({ value: name, label: `${name} (${count})` }));
 
   const genreGroups: DropdownGroup[] = [{ items: [{ value: ALL_GENRES, label: 'All genres' }] }];
   // A genre with no shows in the current dates still needs to appear, so it can be seen and changed.
-  const known = [...genres, ...subGenres].some((item) => item.name === genre);
+  const known = [...categories, ...genres, ...subGenres].some((item) => item.name === genre);
   if (genre && !known) genreGroups.push({ heading: 'Selected', items: [{ value: genre, label: `${genre} (0)` }] });
+  if (categories.length > 0) genreGroups.push({ heading: 'Categories', items: toItems(categories) });
   if (genres.length > 0) genreGroups.push({ heading: 'Genres', items: toItems(genres) });
   if (subGenres.length > 0) genreGroups.push({ heading: 'More specific', items: toItems(subGenres) });
 

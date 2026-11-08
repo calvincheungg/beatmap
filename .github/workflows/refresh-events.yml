@@ -1,11 +1,11 @@
-# Saves fresh Ticketmaster events to Supabase every 6 hours. Run it by hand from the Actions tab too.
+# Saves fresh Ticketmaster events to Supabase once a day, alongside the venue websites. Run it by hand from the Actions tab too.
 # Needs the TICKETMASTER_API_KEY, SUPABASE_URL and SUPABASE_SERVICE_KEY repository secrets.
 name: Refresh events
 
 on:
   schedule:
     # Off the hour, because GitHub delays scheduled runs most at the top of the hour.
-    - cron: '17 */6 * * *'
+    - cron: '17 9 * * *'
   workflow_dispatch:
 
 permissions:

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { MAP_BOUNDS } from '../src/config';
 import { halftonePixels } from '../src/map/halftone';
-import { buildMapStyle, LABEL_LAYERS } from '../src/map/mapStyle';
+import { buildMapStyle, LABEL_LAYERS, modePaint } from '../src/map/mapStyle';
 import { clampToBounds, viewAngles } from '../src/map/view';
 import { theme, toCssColor } from '../src/theme';
 
@@ -45,6 +45,23 @@ describe('buildMapStyle', () => {
 
   it('shows buildings only when zoomed in', () => {
     expect(style.layers.find((layer) => layer.id === 'buildings')?.minzoom).toBeGreaterThan(theme.camera.minZoom);
+  });
+
+  it('paints land and names in night colours by default, and day colours on request', () => {
+    const paintOf = (built: typeof style, id: string) => (built.layers.find((layer) => layer.id === id) as { paint?: Record<string, unknown> }).paint;
+    const day = buildMapStyle('https://example.com/map.pmtiles', MAP_BOUNDS, 'day');
+    expect(paintOf(style, 'land')?.['fill-color']).toBe(toCssColor(theme.mapModes.night.land));
+    expect(paintOf(day, 'land')?.['fill-color']).toBe(toCssColor(theme.mapModes.day.land));
+    expect(paintOf(day, 'place-names')?.['text-color']).toBe(toCssColor(theme.mapModes.day.labelFill));
+    expect(JSON.stringify(paintOf(day, 'buildings')?.['fill-extrusion-color'])).toContain(toCssColor(theme.mapModes.day.buildings[0]!));
+  });
+
+  it('switches only layers that exist, with every colour a mode needs', () => {
+    for (const mode of ['night', 'day'] as const) {
+      const changes = modePaint(mode);
+      for (const { layer } of changes) expect(ids).toContain(layer);
+      expect(changes.filter((change) => change.property === 'text-color').map((change) => change.layer)).toEqual([...LABEL_LAYERS]);
+    }
   });
 
   it('never reaches zooms with non-OSM data', () => {

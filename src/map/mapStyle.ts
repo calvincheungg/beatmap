@@ -4,14 +4,20 @@ import type {
   StyleSpecification,
 } from 'maplibre-gl';
 import type { LonLatBounds } from '../config';
-import { theme, toCssColor, type WidthStops } from '../theme';
+import { theme, toCssColor, type MapMode, type WidthStops } from '../theme';
 
 export const SOURCE = 'protomaps';
 export const WATER_PATTERN = 'halftone-water';
 export const PARK_PATTERN = 'halftone-park';
 
-/** The layers the NAMES toggle shows and hides. */
+/** The layers the names setting shows and hides. */
 export const LABEL_LAYERS = ['street-names-minor', 'street-names-major', 'place-names'] as const;
+
+export interface ModePaint {
+  layer: string;
+  property: 'fill-color' | 'fill-extrusion-color' | 'text-color' | 'text-halo-color';
+  value: string | ExpressionSpecification;
+}
 
 /** The `landuse` kinds drawn as green space. */
 const GREEN_KINDS = [
@@ -79,17 +85,13 @@ function streetNameLayer(id: string, kinds: string[], minzoom: number): LayerSpe
       // Lying flat on an angled road makes names hard to read, so keep the letters facing the viewer.
       'text-pitch-alignment': 'viewport',
     },
-    paint: {
-      'text-color': toCssColor(labels.fill),
-      'text-halo-color': toCssColor(labels.outline),
-      'text-halo-width': labels.outlineWidth,
-    },
+    paint: { 'text-halo-width': labels.outlineWidth },
   };
 }
 
 /** Chooses a grey from the height, so overlapping building parts of equal height match. */
-function buildingColor(): ExpressionSpecification {
-  const { palette, defaultHeight } = theme.buildings;
+function buildingColor(palette: readonly number[]): ExpressionSpecification {
+  const { defaultHeight } = theme.buildings;
   return [
     'to-color',
     [
@@ -117,8 +119,30 @@ function outsideBoundary(bounds: LonLatBounds) {
   };
 }
 
-/** The whole map style, built from the theme. */
-export function buildMapStyle(pmtilesUrl: string, bounds: LonLatBounds): StyleSpecification {
+/** The paint values that differ between night and day, so a switch can change just these. */
+export function modePaint(mode: MapMode): ModePaint[] {
+  const { land, buildings, labelFill, labelOutline } = theme.mapModes[mode];
+  return [
+    { layer: 'land', property: 'fill-color', value: toCssColor(land) },
+    { layer: 'buildings', property: 'fill-extrusion-color', value: buildingColor(buildings) },
+    ...LABEL_LAYERS.flatMap((layer): ModePaint[] => [
+      { layer, property: 'text-color', value: toCssColor(labelFill) },
+      { layer, property: 'text-halo-color', value: toCssColor(labelOutline) },
+    ]),
+  ];
+}
+
+/** The whole map style, built from the theme, in night or day colours. */
+export function buildMapStyle(pmtilesUrl: string, bounds: LonLatBounds, mode: MapMode = 'night'): StyleSpecification {
+  const style = baseStyle(pmtilesUrl, bounds);
+  for (const { layer, property, value } of modePaint(mode)) {
+    const target = style.layers.find((item) => item.id === layer) as { paint?: Record<string, unknown> } | undefined;
+    if (target) target.paint = { ...target.paint, [property]: value };
+  }
+  return style;
+}
+
+function baseStyle(pmtilesUrl: string, bounds: LonLatBounds): StyleSpecification {
   const { colors, roadWidths, waterLineWidths, buildings, labels, light } = theme;
 
   return {
@@ -141,7 +165,6 @@ export function buildMapStyle(pmtilesUrl: string, bounds: LonLatBounds): StyleSp
         type: 'fill',
         source: SOURCE,
         'source-layer': 'earth',
-        paint: { 'fill-color': toCssColor(colors.land) },
       },
       {
         id: 'water',
@@ -180,7 +203,6 @@ export function buildMapStyle(pmtilesUrl: string, bounds: LonLatBounds): StyleSp
         // This layer also holds address points.
         filter: kindIn(['building', 'building_part']),
         paint: {
-          'fill-extrusion-color': buildingColor(),
           'fill-extrusion-height': ['coalesce', ['get', 'height'], buildings.defaultHeight],
           'fill-extrusion-base': ['coalesce', ['get', 'min_height'], 0],
           // A flat colour per face, not a soft gradient, keeps the printed look.
@@ -218,11 +240,7 @@ export function buildMapStyle(pmtilesUrl: string, bounds: LonLatBounds): StyleSp
           ],
           'symbol-sort-key': ['coalesce', ['get', 'sort_key'], 0],
         },
-        paint: {
-          'text-color': toCssColor(labels.fill),
-          'text-halo-color': toCssColor(labels.outline),
-          'text-halo-width': labels.outlineWidth,
-        },
+        paint: { 'text-halo-width': labels.outlineWidth },
       },
     ],
   };

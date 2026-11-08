@@ -31,16 +31,6 @@ body {
   pointer-events: none;
 }
 
-#map-controls .text-button {
-  padding: 0 var(--spacing);
-  font-size: var(--font-size);
-  font-weight: 700;
-}
-
-#map-controls #labels-toggle[aria-pressed='false'] {
-  text-decoration: line-through;
-}
-
 #search {
   position: fixed;
   top: var(--gutter);
@@ -59,6 +49,48 @@ body {
   color: var(--color-text);
   font-family: inherit;
   font-size: var(--font-size);
+}
+
+.search-row {
+  display: flex;
+  gap: var(--spacing);
+}
+
+.search-row input {
+  flex: 1;
+  min-width: 0;
+}
+
+#filters-toggle {
+  flex: none;
+  width: var(--control-size);
+  height: var(--control-size);
+  border: var(--border-width) solid var(--color-border);
+  background: var(--color-panel);
+  color: var(--color-text);
+  font-family: inherit;
+  font-size: var(--icon-size);
+  cursor: pointer;
+}
+
+#filters-toggle.filters-open {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 0 var(--spacing);
+  font-size: var(--font-size);
+  font-weight: 700;
+  box-shadow: var(--shadow-offset) var(--shadow-offset) 0 var(--color-accent);
+}
+
+#filters-toggle.is-active {
+  background: var(--color-tape);
+}
+
+#filters-toggle:focus-visible {
+  outline: var(--border-width) solid var(--color-accent);
+  outline-offset: var(--border-width);
 }
 
 #search input::-webkit-search-cancel-button {
@@ -423,10 +455,63 @@ body {
 
 .show-list li {
   display: flex;
-  flex-direction: column;
+  gap: var(--spacing);
   align-items: flex-start;
   padding: var(--spacing) 0;
   border-top: var(--border-width) solid var(--color-border);
+}
+
+.show-details {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: flex-start;
+  min-width: 0;
+}
+
+.is-cancelled .show-name {
+  text-decoration: line-through;
+  text-decoration-thickness: var(--stamp-border-width);
+}
+
+/* A rubber stamp. Colours are chosen so the words always pass contrast. */
+.stamp {
+  margin-bottom: calc(var(--spacing) / 2);
+  padding: 0 calc(var(--spacing) / 2);
+  border: var(--stamp-border-width) solid var(--color-border);
+  font-family: var(--font-label);
+  font-size: var(--font-size-small);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  mix-blend-mode: multiply;
+}
+
+/* Red text on paper fails contrast, so the red goes on a thick double border around ink text. */
+.stamp-cancelled {
+  border: calc(var(--stamp-border-width) * 2) double var(--color-accent);
+  color: var(--color-text);
+}
+
+/* Ink on red is 4.4:1, under the 4.5:1 small text needs, so the stamp uses large bold text (3:1 is enough). */
+.stamp-soldout {
+  border-color: var(--color-accent);
+  background: var(--color-accent);
+  color: var(--color-text);
+  font-size: var(--font-size-stamp-large);
+  mix-blend-mode: normal;
+}
+
+.stamp-rescheduled,
+.stamp-postponed {
+  background: var(--color-tape);
+  color: var(--color-text);
+}
+
+.stamp-new {
+  border-color: var(--color-fresh);
+  background: var(--color-fresh);
+  color: var(--color-panel);
+  mix-blend-mode: normal;
 }
 
 .show-list li.is-highlighted {
@@ -537,6 +622,68 @@ body {
   }
 }
 
+#settings {
+  position: relative;
+}
+
+#settings-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#settings-toggle svg {
+  width: var(--icon-size);
+  height: var(--icon-size);
+}
+
+#settings-toggle[aria-expanded='true'] {
+  background: var(--color-tape);
+}
+
+/* Opens upwards from the bottom right corner, like a note pinned above the button. */
+#settings-menu {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + var(--gutter));
+  display: grid;
+  gap: var(--spacing);
+  width: calc(var(--panel-width) * 0.75);
+  padding: var(--spacing);
+  border: var(--border-width) solid var(--color-border);
+  background: var(--color-panel);
+  color: var(--color-text);
+  box-shadow: var(--shadow-offset) var(--shadow-offset) 0 var(--color-border);
+}
+
+#settings-menu strong {
+  font-family: var(--font-label);
+  font-weight: 400;
+  text-transform: uppercase;
+}
+
+#map-controls #settings-menu button {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 0 var(--spacing);
+  font-size: var(--font-size);
+  font-weight: 700;
+  text-align: left;
+}
+
+.setting-key {
+  font-size: var(--font-size-small);
+  font-weight: 400;
+}
+
+/* The current choice, set like a typed-in answer on a form. */
+.setting-state {
+  padding: 0 calc(var(--spacing) / 2);
+  border-bottom: var(--border-width) solid var(--color-border);
+}
+
 #status {
   position: fixed;
   top: var(--gutter);
@@ -601,5 +748,25 @@ body {
   #map-controls {
     top: calc(var(--gutter) * 2 + var(--control-size) * 3 + var(--spacing) * 2);
     bottom: auto;
+  }
+
+  /* The controls sit at the top on phones, so the menu opens downwards. */
+  #settings-menu {
+    top: calc(100% + var(--gutter));
+    bottom: auto;
+  }
+}
+
+/* With search collapsed to one button, the phone controls move up beneath it. */
+@media (max-width: 760px) {
+  :root[data-filters='closed'] #map-controls,
+  :root[data-filters='closed'] #status {
+    top: calc(var(--gutter) * 2 + var(--control-size));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #filters-toggle {
+    transition: none;
   }
 }

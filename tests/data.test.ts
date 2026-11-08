@@ -130,7 +130,7 @@ describe('withVenueNeighbourhoods', () => {
 describe('the real venue list', () => {
   it('has the CSV venues, including the original mock ones', () => {
     expect(venues.length).toBeGreaterThan(50);
-    for (const id of ['the-rex-hotel-jazz-blues-bar', 'junction-city-music-hall']) {
+    for (const id of ['the-rex-hotel-jazz-blues-bar', 'junction-underground']) {
       expect(venues.map((venue) => venue.id)).toContain(id);
     }
   });

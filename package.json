@@ -13,6 +13,7 @@
     "data:fetch": "bash scripts/fetch-data.sh",
     "data:geocode": "node scripts/geocode-venues.ts",
     "data:events": "node --env-file-if-exists=.env scripts/fetch-events.ts",
+    "data:venues": "node --env-file-if-exists=.env scripts/fetch-venues.ts",
     "db:new": "npx supabase@latest migration new",
     "db:push": "npx supabase@latest db push --remote"
   },

@@ -3,7 +3,7 @@ import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url';
 import { Protocol } from 'pmtiles';
 import { MAP_BOUNDS, MAP_CENTER, PMTILES_URL } from '../config';
 import { halftonePixels } from '../map/halftone';
-import { buildMapStyle, LABEL_LAYERS, PARK_PATTERN, WATER_PATTERN } from '../map/mapStyle';
+import { buildMapStyle, LABEL_LAYERS, modePaint, PARK_PATTERN, WATER_PATTERN } from '../map/mapStyle';
 import { clampToBounds, viewAngles } from '../map/view';
 import { useMapStore } from '../state/mapStore';
 import { theme } from '../theme';
@@ -30,7 +30,7 @@ export function createMap(container: HTMLElement): () => void {
 
   const map = new MapLibreMap({
     container,
-    style: buildMapStyle(absoluteUrl, MAP_BOUNDS),
+    style: buildMapStyle(absoluteUrl, MAP_BOUNDS, initial.mapMode),
     center: [MAP_CENTER.lon, MAP_CENTER.lat],
     zoom: camera.initialZoom,
     minZoom: camera.minZoom,
@@ -85,6 +85,10 @@ export function createMap(container: HTMLElement): () => void {
       map.easeTo({ ...viewAngles(state.flat, state.rotationSteps), duration: camera.rotateDuration });
     }
     if (state.showLabels !== previous.showLabels && hasLoaded) applyLabels(state.showLabels);
+    // Only the colours that differ change, so the pins and loaded tiles stay put.
+    if (state.mapMode !== previous.mapMode && hasLoaded) {
+      for (const { layer, property, value } of modePaint(state.mapMode)) map.setPaintProperty(layer, property, value);
+    }
     if (state.flyRequest && state.flyRequest !== previous.flyRequest) {
       const { lon, lat, zoom } = state.flyRequest;
       map.flyTo({ center: [lon, lat], zoom, duration: camera.flyDuration });

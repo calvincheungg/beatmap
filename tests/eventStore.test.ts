@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { authHeaders, isSafeToPrune, retentionCutoff, syncEvents, torontoDate } from '../src/data/eventStore';
+import { authHeaders, isSafeToPrune, retentionCutoff, storedLinks, syncEvents, torontoDate } from '../src/data/eventStore';
 import type { ShowEvent } from '../src/data/ticketmaster';
 
 const event = (id: string): ShowEvent => ({
@@ -12,11 +12,14 @@ const event = (id: string): ShowEvent => ({
   venueId: 'v',
   genre: 'Rock',
   subGenre: null,
+  category: 'Music',
   artists: ['A'],
   priceMin: 25,
   priceMax: 40,
   currency: 'CAD',
   ageLabel: '19+',
+  imageUrl: 'https://s1.ticketm.net/dam/a/1.jpg',
+  firstSeenAt: null,
 });
 
 interface Call {
@@ -91,11 +94,13 @@ describe('syncEvents', () => {
         url: 'https://www.ticketmaster.ca/x',
         genre: 'Rock',
         sub_genre: null,
+        category: 'Music',
         artists: ['A'],
         price_min: 25,
         price_max: 40,
         currency: 'CAD',
         age_restriction: '19+',
+        image_url: 'https://s1.ticketm.net/dam/a/1.jpg',
         fetched_at: '2026-11-06T18:00:00.000Z',
       },
     ]);
@@ -106,6 +111,15 @@ describe('syncEvents', () => {
     expect(stale!.url.searchParams.get('source')).toBe('eq.ticketmaster');
     expect(expired!.url.searchParams.get('local_date')).toBe('lt.2026-10-07');
     expect(expired!.url.searchParams.get('source')).toBe('eq.ticketmaster');
+  });
+
+  it('counts, saves and prunes only its own source', async () => {
+    const { calls, config } = fakeSupabase(1);
+    await syncEvents([event('a')], runStart, { ...config, source: 'audienceview:rhcentre' });
+    expect((calls.find((call) => call.method === 'POST')!.body as { source: string }[])[0]!.source).toBe('audienceview:rhcentre');
+    for (const call of calls.filter((item) => item.method !== 'POST')) {
+      expect(call.url.searchParams.get('source')).toBe('eq.audienceview:rhcentre');
+    }
   });
 
   it('saves in batches', async () => {
@@ -128,5 +142,18 @@ describe('syncEvents', () => {
     expect(String(error)).toContain('401');
     expect(String(error)).not.toContain('SECRET');
     expect(calls.some((call) => call.method === 'DELETE')).toBe(false);
+  });
+});
+
+describe('storedLinks', () => {
+  it("reads each stored title's link for one source", async () => {
+    const requests: URL[] = [];
+    const fetcher = (async (input: string) => {
+      requests.push(new URL(input));
+      return new Response(JSON.stringify([{ name: 'Show', url: 'https://x/a' }, { name: null, url: 'https://x/b' }]));
+    }) as unknown as typeof fetch;
+    const links = await storedLinks({ url: 'https://x.supabase.co', serviceKey: 'sb_secret_x', source: 'audienceview:rhcentre', fetcher });
+    expect(links).toEqual(new Map([['Show', 'https://x/a']]));
+    expect(requests[0]!.searchParams.get('source')).toBe('eq.audienceview:rhcentre');
   });
 });

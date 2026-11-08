@@ -1,4 +1,4 @@
-import { todayString, upcomingShows } from '../data/events';
+import { isCancelled, todayString, upcomingShows } from '../data/events';
 import { findNeighbourhood } from '../data/neighbourhoods';
 import { venuesIn } from '../data/venues';
 import { showFilterFrom, useMapStore } from '../state/mapStore';
@@ -68,7 +68,7 @@ export function SidePanel() {
                   onClick={() => selectVenue(listed)}
                 >
                   {listed.name}
-                  {events && <ShowCount count={upcomingShows(events, listed.id, today, filter).length} />}
+                  {events && <ShowCount count={upcomingShows(events, listed.id, today, filter).filter((show) => !isCancelled(show)).length} />}
                 </button>
               </li>
             ))}

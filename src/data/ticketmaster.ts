@@ -6,16 +6,27 @@ const PAGE_SIZE = 200;
 const MAX_ITEMS = 1000;
 /** Fetching in short windows keeps busy periods under that limit. */
 const WINDOW_DAYS = 30;
-const WINDOWS = 6;
+/** About 13 months ahead, so next summer's amphitheatre and stadium shows are included. */
+const WINDOWS = 13;
 /** Ticketmaster's docs give 2 or 5 requests per second in different places, so stay under both. */
 const REQUEST_GAP_MS = 550;
 /** Two names that match must be this close, in metres. */
 const NAME_MATCH_METRES = 400;
+/** An exact, multi-word name match is trusted this far away, for venues Ticketmaster pins wrongly. */
+const EXACT_NAME_MATCH_METRES = 25000;
 /** A venue this close counts as a match when it's the only one nearby and the names differ. */
 const LOCATION_MATCH_METRES = 75;
 
-/** The docs spell it `canceled`, but real responses use `cancelled`. */
+/** Extras sold as their own listings, like "Lawn Chair Rental - Riley Green" or "Early Entry VIP Upgrade". */
+const NOT_A_SHOW = /\b(lawn chairs?|chair rental|parking|vip upgrade|early entry|locker rental|voucher|add-?on|fast lane|suite rental)\b/i;
+
+/** The docs spell it `canceled`, but real responses use `cancelled`. Both are stored as `cancelled`. */
 const CANCELLED = new Set(['canceled', 'cancelled']);
+export const CANCELLED_STATUS = 'cancelled';
+/** Images are picked from these shapes, in order of preference. 3:2 comes in a small 305px size. */
+const IMAGE_RATIOS = ['3_2', '16_9', '4_3'];
+/** The smallest image width worth showing, in pixels: twice the thumbnail, for sharp screens. */
+const MIN_IMAGE_WIDTH = 300;
 
 const GEOHASH_ALPHABET = '0123456789bcdefghjkmnpqrstuvwxyz';
 
@@ -60,10 +71,19 @@ export interface ApiClassification {
   subGenre?: { name?: string };
 }
 
+export interface ApiImage {
+  url?: string;
+  ratio?: string;
+  width?: number;
+  /** True for Ticketmaster's generic placeholder pictures. */
+  fallback?: boolean;
+}
+
 export interface ApiEvent {
   id?: string;
   name?: string;
   url?: string;
+  images?: ApiImage[];
   classifications?: ApiClassification[];
   priceRanges?: { currency?: string; min?: number; max?: number }[];
   info?: string;
@@ -185,6 +205,10 @@ export function matchVenue<T extends MatchableVenue>(apiVenue: ApiVenue, venues:
   const byName = hasLocation ? named.filter((venue) => distance(venue) <= NAME_MATCH_METRES) : named;
   if (byName.length > 0) return byName.sort((a, b) => distance(a) - distance(b))[0]!;
 
+  // Ticketmaster's pin is sometimes kilometres off. The exact full name, if it's specific, still counts.
+  const exact = named.filter((venue) => normalizeVenueName(venue.name) === name && name.includes(' ') && distance(venue) <= EXACT_NAME_MATCH_METRES);
+  if (exact.length === 1) return exact[0]!;
+
   const nearby = venues.filter((venue) => distance(venue) <= LOCATION_MATCH_METRES);
   return nearby.length === 1 ? nearby[0]! : null;
 }
@@ -202,6 +226,8 @@ export interface ShowEvent {
   /** Null when Ticketmaster gives only a placeholder like "Other". */
   genre: string | null;
   subGenre: string | null;
+  /** Music, Dance, Theatre and so on. Every Ticketmaster show is Music. See categories.ts. */
+  category: string;
   /** Everyone on the bill, including support acts the title often leaves out. */
   artists: string[];
   /** Null when unknown, which is most shows sold on Ticketmaster.ca. It never means free. */
@@ -210,6 +236,25 @@ export interface ShowEvent {
   currency: string | null;
   /** "All ages", "19+" and so on. Null when the listing doesn't say. */
   ageLabel: string | null;
+  /** A picture of the show or artist. Null when Ticketmaster has only a placeholder. */
+  imageUrl: string | null;
+  /** When a sync first saw the show, as an ISO time. Set by the database, so null from the API. */
+  firstSeenAt: string | null;
+}
+
+/**
+ * Picks the smallest real picture that's wide enough, in the most preferred shape available.
+ * Placeholders and anything not on https are skipped.
+ */
+export function pickImage(images: ApiImage[] | undefined): string | null {
+  const usable = (images ?? []).filter(
+    (image) => !image.fallback && typeof image.url === 'string' && /^https:\/\//i.test(image.url) && (image.width ?? 0) >= MIN_IMAGE_WIDTH,
+  );
+  for (const ratio of IMAGE_RATIOS) {
+    const [smallest] = usable.filter((image) => image.ratio === ratio).sort((a, b) => (a.width ?? 0) - (b.width ?? 0));
+    if (smallest?.url) return smallest.url;
+  }
+  return null;
 }
 
 const ALL_AGES = /\ball[\s-]+ages\b/i;
@@ -273,7 +318,10 @@ export interface CoverageReport {
   matchedNames: Map<string, Set<string>>;
 }
 
-/** Keeps events at our venues, in date order. Cancelled events and incomplete records are dropped. */
+/**
+ * Keeps events at our venues, in date order. Incomplete records are dropped. Cancelled events are
+ * kept, so the app can mark them, and both spellings become `cancelled`.
+ */
 export function toShowEvents<T extends MatchableVenue>(apiEvents: ApiEvent[], venues: T[]): CoverageReport {
   const events: ShowEvent[] = [];
   const matchedCounts = new Map<string, number>();
@@ -283,8 +331,9 @@ export function toShowEvents<T extends MatchableVenue>(apiEvents: ApiEvent[], ve
   for (const event of apiEvents) {
     const date = event.dates?.start?.localDate;
     const apiVenue = event._embedded?.venues?.[0];
-    const status = event.dates?.status?.code ?? 'unknown';
-    if (!event.id || !event.name || !event.url || !date || !apiVenue || CANCELLED.has(status)) continue;
+    const code = event.dates?.status?.code ?? 'unknown';
+    const status = CANCELLED.has(code) ? CANCELLED_STATUS : code;
+    if (!event.id || !event.name || !event.url || !date || !apiVenue || NOT_A_SHOW.test(event.name)) continue;
     if (!/^https?:\/\//i.test(event.url)) continue;
 
     const venue = matchVenue(apiVenue, venues);
@@ -305,8 +354,11 @@ export function toShowEvents<T extends MatchableVenue>(apiEvents: ApiEvent[], ve
       url: event.url,
       venueId: venue.id,
       ...primaryGenres(event),
+      category: 'Music',
       ...readPrice(event),
       ageLabel: readAge(event),
+      imageUrl: pickImage(event.images),
+      firstSeenAt: null,
       artists: [...new Set((event._embedded?.attractions ?? []).map((artist) => artist.name?.trim()).filter((name) => !!name))] as string[],
     });
   }

@@ -21,7 +21,6 @@ export const theme = {
   background: palette.ink,
 
   colors: {
-    land: palette.paperDark,
     water: palette.risoBlue,
     park: palette.risoGreen,
     roadsHighway: palette.highwayOrange,
@@ -39,6 +38,8 @@ export const theme = {
       accent: palette.risoRed,
       tape: palette.risoYellow,
       fade: palette.fade,
+      /** The "Just added" stamp, with paper text. Blue so it doesn't read as a warning. */
+      fresh: palette.risoBlue,
     },
     fontFamily: "'Space Mono', 'IBM Plex Mono', monospace",
     displayFontFamily: "'Anton', 'Bebas Neue', sans-serif",
@@ -58,6 +59,30 @@ export const theme = {
     pressDuration: '120ms',
     /** Keeps the rotate buttons clear of the attribution line. */
     controlsBottom: '48px',
+    stampBorderWidth: '2px',
+    /** Large enough to count as large bold text, for stamps whose colours only pass contrast at that size. */
+    largeStampFontSize: '19px',
+  },
+
+  /**
+   * The map's night and day looks. Only land, buildings and names change: water, parks, roads and
+   * pins keep the same inks in both.
+   */
+  mapModes: {
+    night: {
+      land: palette.paperDark,
+      /** Dark greys. A building's colour is chosen from its height. */
+      buildings: [0x6b6e73, 0x63666b, 0x73767b, 0x5d6065, 0x686b70, 0x6f7277, 0x606368],
+      labelFill: palette.paper,
+      labelOutline: palette.ink,
+    },
+    day: {
+      land: palette.paper,
+      /** Warm greys, like pencil shading on the paper. */
+      buildings: [0xb3ab9d, 0xaba395, 0xbbb3a5, 0xa59d8f, 0xb0a89a, 0xb7afa1, 0xa8a092],
+      labelFill: palette.ink,
+      labelOutline: palette.paper,
+    },
   },
 
   roadWidths: {
@@ -71,9 +96,7 @@ export const theme = {
   waterLineWidths: [[10, 0.5], [15, 4], [18, 14]] satisfies WidthStops,
 
   buildings: {
-    /** Dark greys. A building's colour is chosen from its height. */
-    palette: [0x6b6e73, 0x63666b, 0x73767b, 0x5d6065, 0x686b70, 0x6f7277, 0x606368],
-    /** The zoom at which buildings first appear. */
+    /** Colours are in mapModes. The zoom at which buildings first appear. */
     minZoom: 13,
     /** Used when a building has no height. Tagged levels are already converted by the tiles. */
     defaultHeight: 7,
@@ -100,8 +123,7 @@ export const theme = {
     font: ['Noto Sans Medium'],
     placeSize: { locality: 15, neighbourhood: 12 },
     streetSize: 11,
-    fill: palette.paper,
-    outline: palette.ink,
+    /** Text and outline colours are in mapModes. */
     outlineWidth: 1.5,
     /** Zooms at which street names first appear. */
     majorStreetMinZoom: 13.5,
@@ -146,6 +168,8 @@ export const theme = {
     flyDuration: 1200,
   },
 };
+
+export type MapMode = keyof typeof theme.mapModes;
 
 export function toCssColor(hex: number): string {
   return `#${hex.toString(16).padStart(6, '0')}`;

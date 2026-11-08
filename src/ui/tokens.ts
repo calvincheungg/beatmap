@@ -23,4 +23,6 @@ export function applyThemeTokens(root: HTMLElement = document.documentElement): 
   root.style.setProperty('--shadow-offset', ui.shadowOffset);
   root.style.setProperty('--press-duration', ui.pressDuration);
   root.style.setProperty('--controls-bottom', ui.controlsBottom);
+  root.style.setProperty('--stamp-border-width', ui.stampBorderWidth);
+  root.style.setProperty('--font-size-stamp-large', ui.largeStampFontSize);
 }

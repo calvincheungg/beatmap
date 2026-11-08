@@ -22,6 +22,8 @@ npm run data:fetch               # regenerate public/data/gta.pmtiles (needs pmt
 npm run data:fetch -- downtown   # downtown extract only
 npm run data:geocode             # fill in lat/lon for new venues in the CSV
 npm run data:events              # sync Ticketmaster events to Supabase (needs secrets in .env)
+npm run data:venues              # sync venue websites (AudienceView, schema.org events) to Supabase
+npm run data:venues -- redwood   # sync only the named venues (see the keys in scripts/fetch-venues.ts)
 npm run db:new -- name           # create a database migration
 npm run db:push                  # apply new migrations to the linked project
 ```
@@ -40,7 +42,30 @@ npm run db:push                  # apply new migrations to the linked project
 | `src/data/toronto_music_venues.csv` | The only venue list. The app reads it directly |
 | `src/data/` | Venue and neighbourhood loaders; `neighbourhoods.json` is the base search list |
 | `src/data/ticketmaster.ts` | Ticketmaster fetching and venue matching, used by `scripts/fetch-events.ts` |
-| `src/data/eventStore.ts` | Saves events to Supabase and enforces the 30 day retention. Script only |
+| `src/data/eventStore.ts` | Saves events to Supabase per source and enforces the 30 day retention. Script only |
+| `src/data/audienceview.ts` | Venue box offices on AudienceView (Richmond Hill Centre, Flato Markham Theatre). Facts only, no descriptions or images |
+| `src/data/schemaEvents.ts` | Venue sites with schema.org Event data on event pages (The Redwood Theatre, Geary Warehouse, Leah Posluns Theatre). Facts only |
+| `src/data/politeFetch.ts` | Shared rules for reading venue sites: 2 s gap, BeatMap User-Agent, allow-list, stop on error |
+| `src/data/rcmusic.ts` | Koerner Hall and Mazzoleni Concert Hall from rcmusic.com's concert listings. Facts only, no prices |
+| `src/data/eventbrite.ts` | Venues selling on Eventbrite (Lula Lounge), through Eventbrite's API. Needs EVENTBRITE_TOKEN |
+| `src/data/tribeEvents.ts` | WordPress sites with The Events Calendar's REST API (Jazz Bistro, Grossman's Tavern, Junction Underground, Castro's Lounge, Wiggle Room) |
+| `src/data/admitOne.ts` | Venues on Admit One, through its public embed API (Adelaide Hall, Queen Elizabeth Theatre) |
+| `src/data/elfsightCalendar.ts` | Venues with an Elfsight event calendar widget (Bovine Sex Club, Japanese Canadian Cultural Centre). Event types can be skipped or given a category |
+| `src/data/showpass.ts` | Venues selling on Showpass, through its public discovery API (Burdock Music Hall, Hugh's Room) |
+| `src/data/drom.ts` | DROM Taberna's home page event cards. Only about three days ahead are published |
+| `src/data/shopifyShows.ts` | Shows sold as Shopify products, from a collection's products.json (The Rex) |
+| `src/data/wixEvents.ts` | Wix Events widget data embedded in a page (The Cameron House) |
+| `src/data/reservoir.ts` | The Reservoir Lounge's weekly lineup, from the Google Sheet its site publishes. One week at a time |
+| `src/data/artsPeople.ts` | Companies on the Arts People box office: production pages with performances (Scarborough Village Theatre) |
+| `src/data/tickera.ts` | WordPress sites selling with the Tickera plugin: listing, then show pages (Linsmore Tavern) |
+| `src/data/boomtech.ts` | Wix sites with Boomtech's Event Calendar: site token, then its calendar API (Free Times Cafe) |
+| `src/data/mrBlack.ts` | Clubs selling on Mr Black, from its public list of upcoming nights (Future). Standing weekly guest-list nights are left out |
+| `src/data/rhythm.ts` | Rhythm's Shopify events page: date and title only, ticket links passed on to RA but never requested |
+| `src/data/bsmt254.ts` | BSMT 254's listing, then each show's page for the real time, prices and style (cached 3 days) |
+| `src/data/squarespaceEvents.ts` | Squarespace events collections, from the collection's own page, since `?format=json` and `/api/` are disallowed (The Painted Lady) |
+| `src/data/feedShow.ts` | Shared helpers for feed adapters: building shows, prices and ages from text |
+| `src/data/pageCache.ts` | Caches facts from venues' show pages in Supabase for 3 days. Script only |
+| `src/data/categories.ts` | Keyword rules sorting non-Ticketmaster shows into Music, Dance, Theatre and so on |
 | `src/data/events.ts` | Loads events from Supabase and formats them for the side panel |
 | `supabase/migrations/` | Every database change, in order. Never edit one that's applied; add a new one |
 | `src/theme.ts` | All colours, fonts and sizes |
@@ -48,7 +73,9 @@ npm run db:push                  # apply new migrations to the linked project
 | `tests/` | Unit tests |
 | `scripts/fetch-data.sh` | Generates map extracts |
 
-GitHub Actions syncs events to Supabase every 6 hours (`.github/workflows/refresh-events.yml`). Never expose the service key or Ticketmaster key to the browser: only `VITE_` values reach it, and every table needs row level security.
+GitHub Actions syncs Ticketmaster (`.github/workflows/refresh-events.yml`, 09:17 UTC) and venue
+websites (`refresh-venues.yml`, 09:43 UTC) once a day. Venue sites get 2 seconds between requests, the BeatMap
+User-Agent, search pages only, and the adapter stops rather than retrying when blocked. Never expose the service key or Ticketmaster key to the browser: only `VITE_` values reach it, and every table needs row level security.
 
 Heights come from the tiles (`levels × 3 + 2` m); buildings with no height get 7 m.
 
@@ -90,6 +117,6 @@ The Three.js version is kept at the git tag `three-js-version`.
 - Ask before adding dependencies or changing the data pipeline.
 
 ## Don'ts
-- Don't scrape Facebook, Instagram or any site whose terms forbid it.
+- Don't scrape Facebook or Instagram.
 - Don't commit large map data files; document how to regenerate them.
 - Don't hard-code API keys. Use `.env` and keep it out of git.
