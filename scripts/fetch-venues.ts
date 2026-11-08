@@ -15,6 +15,7 @@ import {
 } from '../src/data/audienceview.ts';
 import { storedLinks, syncEvents, torontoDate } from '../src/data/eventStore.ts';
 import { isFresh, readPageCache, writePageCache } from '../src/data/pageCache.ts';
+import { HttpStatusError } from '../src/data/politeFetch.ts';
 import type { ShowEvent } from '../src/data/ticketmaster.ts';
 import type { SearchRow } from '../src/data/audienceview.ts';
 import * as admitOne from '../src/data/admitOne.ts';
@@ -55,7 +56,8 @@ const RCM_KEY = 'rcm';
 const EVENTBRITE_VENUES: eventbrite.EventbriteVenue[] = [eventbrite.LULA_LOUNGE];
 /** Venues read from a ready-made event feed: one request each, no pages to read. */
 /** `mayBeEmpty` venues publish one week at a time, so an empty feed between weeks isn't a failure. */
-const FEED_VENUES: { key: string; source: string; load: (today: string) => Promise<ShowEvent[]>; mayBeEmpty?: boolean }[] = [
+/** `mayRefuseCloud` venues refuse GitHub's servers (403) but not home connections, so that refusal is only a warning. */
+const FEED_VENUES: { key: string; source: string; load: (today: string) => Promise<ShowEvent[]>; mayBeEmpty?: boolean; mayRefuseCloud?: boolean }[] = [
   { key: tribe.JAZZ_BISTRO.key, source: 'tribe:jazzbistro', load: (today) => tribe.fetchShows(tribe.JAZZ_BISTRO, today) },
   { key: admitOne.ADELAIDE_HALL.key, source: 'admitone:adelaide', load: () => admitOne.fetchShows(admitOne.ADELAIDE_HALL) },
   { key: elfsight.BOVINE_SEX_CLUB.key, source: 'elfsight:bovine', load: (today) => elfsight.fetchShows(elfsight.BOVINE_SEX_CLUB, today) },
@@ -77,7 +79,8 @@ const FEED_VENUES: { key: string; source: string; load: (today: string) => Promi
     load: (today) => artsPeople.fetchShows(artsPeople.SCARBOROUGH_VILLAGE_THEATRE, today),
   },
   { key: tribe.WIGGLE_ROOM.key, source: 'tribe:wiggle', load: (today) => tribe.fetchShows(tribe.WIGGLE_ROOM, today) },
-  { key: mrBlack.FUTURE.key, source: 'mrblack:future', load: (today) => mrBlack.fetchShows(mrBlack.FUTURE, today) },
+  // Mr Black refuses GitHub Actions. Sync it from home with: npm run data:venues -- future
+  { key: mrBlack.FUTURE.key, source: 'mrblack:future', load: (today) => mrBlack.fetchShows(mrBlack.FUTURE, today), mayRefuseCloud: true },
   // Rhythm posts a few weeks at a time, so its page can briefly hold only past events.
   { key: 'rhythm', source: 'site:rhythm', load: (today) => rhythm.fetchShows(today), mayBeEmpty: true },
   {
@@ -206,6 +209,11 @@ for (const venue of chosen(FEED_VENUES)) {
     if (!pruned) console.warn(`${venue.key}: far fewer shows than usual, so unlisted ones were kept. Check this run.`);
     console.log(`${venue.key}: saved ${saved} shows.`);
   } catch (error) {
+    if (venue.mayRefuseCloud && error instanceof HttpStatusError && error.status === 403) {
+      // Its existing listings are kept. A sync from a home connection refreshes them.
+      console.warn(`${venue.key}: refused (403), as it does from GitHub's servers, so nothing changed. Sync it locally: npm run data:venues -- ${venue.key}`);
+      continue;
+    }
     failed = true;
     console.error(`${venue.key}: ${error instanceof Error ? error.message : String(error)}`);
   }

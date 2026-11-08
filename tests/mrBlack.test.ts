@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import * as mrBlack from '../src/data/mrBlack';
+import { HttpStatusError } from '../src/data/politeFetch';
 
 const venue = mrBlack.FUTURE;
 const night = (overrides: Partial<mrBlack.MrBlackEvent> = {}): mrBlack.MrBlackEvent => ({
@@ -62,6 +63,13 @@ describe('Mr Black (Future)', () => {
     expect(mrBlack.isAllowedUrl(venue, mrBlack.eventsUrl(venue, 3))).toBe(true);
     expect(mrBlack.isAllowedUrl(venue, 'https://buy.mrblackapp.com/api/v1/venue/8769/embed')).toBe(false);
     expect(mrBlack.isAllowedUrl(venue, `${mrBlack.eventsUrl(venue, 0)}&extra=1`)).toBe(false);
+  });
+
+  it('reports a refusal with its status, so the sync can treat it as a warning', async () => {
+    const fetcher = (async () => new Response('Forbidden', { status: 403 })) as unknown as typeof fetch;
+    const failure = await mrBlack.fetchShows(venue, '2026-11-08', mrBlack.createFetch(venue, { fetcher })).catch((error: unknown) => error);
+    expect(failure).toBeInstanceOf(HttpStatusError);
+    expect((failure as HttpStatusError).status).toBe(403);
   });
 
   it('stops when the answer is not a list', async () => {

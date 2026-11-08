@@ -15,6 +15,17 @@ export interface PoliteFetchOptions {
   wait?: (ms: number) => Promise<void>;
 }
 
+/** A site answered with an error status, like 403 when it refuses us. */
+export class HttpStatusError extends Error {
+  constructor(
+    message: string,
+    readonly status: number,
+  ) {
+    super(message);
+    this.name = 'HttpStatusError';
+  }
+}
+
 /** Fetches a page's HTML. `what` names the page in errors. */
 export type PageFetch = (url: string, what: string) => Promise<string>;
 
@@ -40,7 +51,7 @@ export function createPoliteFetch(key: string, isAllowed: (url: string) => boole
       const split = pair?.indexOf('=') ?? -1;
       if (pair && split > 0) cookies.set(pair.slice(0, split).trim(), pair.slice(split + 1).trim());
     }
-    if (!response.ok) throw new Error(`${key} returned ${response.status} for ${what}. Stopping.`);
+    if (!response.ok) throw new HttpStatusError(`${key} returned ${response.status} for ${what}. Stopping.`, response.status);
     return response.text();
   };
 }
