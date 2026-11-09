@@ -40,6 +40,15 @@ export const THE_PISTON: SquarespaceVenue = {
   defaults: { category: 'Music' },
 };
 
+/** Every listing is at 243 Queen St W. The club's east-end room isn't on this list. */
+export const THE_CORNER_COMEDY_CLUB: SquarespaceVenue = {
+  key: 'corner',
+  siteUrl: 'https://thecornercomedy.com/',
+  eventsPath: 'showtimes-listings',
+  venueId: 'the-corner-comedy-club',
+  defaults: { category: 'Comedy' },
+};
+
 export function eventsUrl(venue: SquarespaceVenue): string {
   return `${venue.siteUrl}${venue.eventsPath}`;
 }

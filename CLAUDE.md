@@ -41,17 +41,17 @@ npm run db:push                  # apply new migrations to the linked project
 | `src/state/mapStore.ts` | Zustand store: view options, selection, fly requests, load state |
 | `src/data/toronto_music_venues.csv` | The only venue list. The app reads it directly |
 | `src/data/` | Venue and neighbourhood loaders; `neighbourhoods.json` is the base search list |
-| `src/data/ticketmaster.ts` | Ticketmaster fetching and venue matching, used by `scripts/fetch-events.ts` |
+| `src/data/ticketmaster.ts` | Ticketmaster fetching (music and comedy) and venue matching, used by `scripts/fetch-events.ts` |
 | `src/data/eventStore.ts` | Saves events to Supabase per source and enforces the 30 day retention. Script only |
 | `src/data/audienceview.ts` | Venue box offices on AudienceView (Richmond Hill Centre, Flato Markham Theatre). Facts only, no descriptions or images |
-| `src/data/schemaEvents.ts` | Venue sites with schema.org Event data on event pages (The Redwood Theatre, Geary Warehouse, Leah Posluns Theatre). Facts only |
+| `src/data/schemaEvents.ts` | Venue sites with schema.org Event data on event pages (The Redwood Theatre, Geary Warehouse, Leah Posluns Theatre, Backroom Comedy Club, The Second City). Facts only |
 | `src/data/politeFetch.ts` | Shared rules for reading venue sites: 2 s gap, BeatMap User-Agent, allow-list, stop on error |
 | `src/data/rcmusic.ts` | Koerner Hall and Mazzoleni Concert Hall from rcmusic.com's concert listings. Facts only, no prices |
-| `src/data/eventbrite.ts` | Venues selling on Eventbrite (Lula Lounge), through Eventbrite's API. Needs EVENTBRITE_TOKEN |
+| `src/data/eventbrite.ts` | Venues selling on Eventbrite (Lula Lounge, SoCap Comedy), through Eventbrite's API. Needs EVENTBRITE_TOKEN |
 | `src/data/tribeEvents.ts` | WordPress sites with The Events Calendar's REST API (Jazz Bistro, Grossman's Tavern, Junction Underground, Castro's Lounge, Wiggle Room) |
 | `src/data/admitOne.ts` | Venues on Admit One, through its public embed API (Adelaide Hall, Queen Elizabeth Theatre) |
 | `src/data/elfsightCalendar.ts` | Venues with an Elfsight event calendar widget (Bovine Sex Club, Japanese Canadian Cultural Centre). Event types can be skipped or given a category |
-| `src/data/showpass.ts` | Venues selling on Showpass, through its public discovery API (Burdock Music Hall, Hugh's Room) |
+| `src/data/showpass.ts` | Venues selling on Showpass, through its public discovery API (Burdock Music Hall, Hugh's Room, Absolute Comedy) |
 | `src/data/drom.ts` | DROM Taberna's home page event cards. Only about three days ahead are published |
 | `src/data/shopifyShows.ts` | Shows sold as Shopify products, from a collection's products.json (The Rex) |
 | `src/data/wixEvents.ts` | Wix Events widget data embedded in a page (The Cameron House) |
@@ -62,9 +62,12 @@ npm run db:push                  # apply new migrations to the linked project
 | `src/data/mrBlack.ts` | Clubs selling on Mr Black, from its public list of upcoming nights (Future). Standing weekly guest-list nights are left out |
 | `src/data/rhythm.ts` | Rhythm's Shopify events page: date and title only, ticket links passed on to RA but never requested |
 | `src/data/bsmt254.ts` | BSMT 254's listing, then each show's page for the real time, prices and style (cached 3 days) |
-| `src/data/squarespaceEvents.ts` | Squarespace events collections, from the collection's own page, since `?format=json` and `/api/` are disallowed (The Painted Lady, The Piston) |
+| `src/data/squarespaceEvents.ts` | Squarespace events collections, from the collection's own page, since `?format=json` and `/api/` are disallowed (The Painted Lady, The Piston, The Corner Comedy Club) |
 | `src/data/tranzac.ts` | The Tranzac: sitemap, then each event page's Nuxt payload for the exact start (cached 3 days, up to 120 pages a run) |
 | `src/data/coc.ts` | Canadian Opera Company performances at the Four Seasons Centre, from the feed its calendar page loads |
+| `src/data/comedyBar.ts` | Comedy Bar's Bloor and Danforth clubs: home page show links, then each show page's dates (cached 3 days, up to 120 pages a run) |
+| `src/data/yukYuks.ts` | Yuk Yuk's Toronto club page: show cards with runs of days and showtimes |
+| `src/data/badDog.ts` | Bad Dog Theatre's What's On list, filed under the theatre each show is at (Sweet Action Theatre, Society Clubhouse) |
 | `src/data/feedShow.ts` | Shared helpers for feed adapters: building shows, prices and ages from text |
 | `src/data/pageCache.ts` | Caches facts from venues' show pages in Supabase for 3 days. Script only |
 | `src/data/categories.ts` | Keyword rules sorting non-Ticketmaster shows into Music, Dance, Theatre and so on |

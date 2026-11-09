@@ -19,7 +19,21 @@ export interface ShowpassVenue {
   showpassVenueId: number;
   venueId: string;
   defaults: VenueDefaults;
+  /**
+   * For a Showpass venue id shared by several locations: only events whose name contains this are
+   * kept, and the part of the name up to and including it (like "Absolute Comedy Toronto:") is removed.
+   */
+  namePrefix?: string;
 }
+
+/** Absolute Comedy's Toronto and Ottawa clubs share one Showpass venue, told apart by the event name. */
+export const ABSOLUTE_COMEDY: ShowpassVenue = {
+  key: 'absolute',
+  showpassVenueId: 13568,
+  venueId: 'absolute-comedy',
+  defaults: { category: 'Comedy' },
+  namePrefix: 'Absolute Comedy Toronto:',
+};
 
 export const BURDOCK_MUSIC_HALL: ShowpassVenue = {
   key: 'burdock',
@@ -63,7 +77,10 @@ export function isAllowedUrl(url: string): boolean {
 
 export function toShowEvents(events: ShowpassEvent[], venue: ShowpassVenue): ShowEvent[] {
   return events.flatMap((event): ShowEvent[] => {
-    const name = decodeText(event.name ?? '');
+    const fullName = decodeText(event.name ?? '');
+    const prefixAt = venue.namePrefix ? fullName.toLowerCase().indexOf(venue.namePrefix.toLowerCase()) : 0;
+    if (prefixAt < 0) return [];
+    const name = venue.namePrefix ? fullName.slice(prefixAt + venue.namePrefix.length).trim() || fullName : fullName;
     const start = new Date(event.starts_on ?? '');
     const url = event.frontend_details_url ?? '';
     if (!name || Number.isNaN(start.getTime()) || event.date_time_to_be_determined || !url.startsWith('https://')) return [];

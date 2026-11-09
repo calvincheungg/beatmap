@@ -23,7 +23,9 @@ import * as artsPeople from '../src/data/artsPeople.ts';
 import * as elfsight from '../src/data/elfsightCalendar.ts';
 import * as boomtech from '../src/data/boomtech.ts';
 import * as bsmt254 from '../src/data/bsmt254.ts';
+import * as badDog from '../src/data/badDog.ts';
 import * as coc from '../src/data/coc.ts';
+import * as comedyBar from '../src/data/comedyBar.ts';
 import * as drom from '../src/data/drom.ts';
 import * as mrBlack from '../src/data/mrBlack.ts';
 import * as rhythm from '../src/data/rhythm.ts';
@@ -37,12 +39,13 @@ import * as shopify from '../src/data/shopifyShows.ts';
 import * as showpass from '../src/data/showpass.ts';
 import * as squarespace from '../src/data/squarespaceEvents.ts';
 import * as tranzac from '../src/data/tranzac.ts';
+import * as yukYuks from '../src/data/yukYuks.ts';
 import * as schema from '../src/data/schemaEvents.ts';
 
 /** Venues on AudienceView. Add another by giving it a config like RICHMOND_HILL_CENTRE. */
 const VENUES: AudienceViewVenue[] = [RICHMOND_HILL_CENTRE, FLATO_MARKHAM_THEATRE];
 /** Venues whose event pages carry schema.org Event data. Add another with a config like REDWOOD_THEATRE. */
-const SCHEMA_VENUES: schema.SchemaEventVenue[] = [schema.REDWOOD_THEATRE, schema.GEARY_WAREHOUSE, schema.LEAH_POSLUNS_THEATRE];
+const SCHEMA_VENUES: schema.SchemaEventVenue[] = [schema.REDWOOD_THEATRE, schema.GEARY_WAREHOUSE, schema.LEAH_POSLUNS_THEATRE, schema.BACKROOM_COMEDY_CLUB, schema.SECOND_CITY_TORONTO];
 
 const { SUPABASE_URL: url, SUPABASE_SERVICE_KEY: serviceKey } = process.env;
 if (!url || !serviceKey) {
@@ -55,7 +58,7 @@ const only = new Set(process.argv.slice(2));
 /** The Royal Conservatory's halls (Koerner Hall, Mazzoleni Concert Hall), read from rcmusic.com together. */
 const RCM_KEY = 'rcm';
 /** Venues that sell on Eventbrite, read through its API. Needs EVENTBRITE_TOKEN. */
-const EVENTBRITE_VENUES: eventbrite.EventbriteVenue[] = [eventbrite.LULA_LOUNGE];
+const EVENTBRITE_VENUES: eventbrite.EventbriteVenue[] = [eventbrite.LULA_LOUNGE, eventbrite.SOCAP_COMEDY];
 /** Venues read from a ready-made event feed: one request each, no pages to read. */
 /** `mayBeEmpty` venues publish one week at a time, so an empty feed between weeks isn't a failure. */
 /** `mayRefuseCloud` venues refuse GitHub's servers (403) but not home connections, so that refusal is only a warning. */
@@ -69,6 +72,7 @@ const FEED_VENUES: { key: string; source: string; load: (today: string) => Promi
   { key: admitOne.QUEEN_ELIZABETH_THEATRE.key, source: 'admitone:qet', load: () => admitOne.fetchShows(admitOne.QUEEN_ELIZABETH_THEATRE) },
   { key: showpass.BURDOCK_MUSIC_HALL.key, source: 'showpass:burdock', load: () => showpass.fetchShows(showpass.BURDOCK_MUSIC_HALL) },
   { key: showpass.HUGHS_ROOM.key, source: 'showpass:hughs', load: () => showpass.fetchShows(showpass.HUGHS_ROOM) },
+  { key: showpass.ABSOLUTE_COMEDY.key, source: 'showpass:absolute', load: () => showpass.fetchShows(showpass.ABSOLUTE_COMEDY) },
   { key: 'drom', source: 'site:drom', load: () => drom.fetchShows() },
   { key: shopify.THE_REX.key, source: 'shopify:rex', load: (today) => shopify.fetchShows(shopify.THE_REX, today) },
   { key: wix.THE_CAMERON_HOUSE.key, source: 'wix:cameron', load: (today) => wix.fetchShows(wix.THE_CAMERON_HOUSE, today) },
@@ -97,6 +101,14 @@ const FEED_VENUES: { key: string; source: string; load: (today: string) => Promi
   },
   { key: squarespace.THE_PISTON.key, source: 'squarespace:piston', load: (today) => squarespace.fetchShows(squarespace.THE_PISTON, today) },
   { key: 'coc', source: 'coc:fourseasons', load: (today) => coc.fetchShows(today) },
+  {
+    key: squarespace.THE_CORNER_COMEDY_CLUB.key,
+    source: 'squarespace:corner',
+    load: (today) => squarespace.fetchShows(squarespace.THE_CORNER_COMEDY_CLUB, today),
+  },
+  { key: 'yukyuks', source: 'site:yukyuks', load: (today) => yukYuks.fetchShows(today) },
+  // Bad Dog's shows, filed under the theatres they're at (Sweet Action Theatre, Society Clubhouse).
+  { key: 'baddog', source: 'site:baddog', load: (today) => badDog.fetchShows(today) },
 ];
 /** What a venue read through cached show pages returns. `fetched` holds this run's pages; null means a page with no show. */
 interface CachedPagesResult {
@@ -113,6 +125,8 @@ const CACHED_PAGE_VENUES: {
 }[] = [
   { key: 'bsmt254', source: 'site:bsmt254', load: (today, cached, fresh) => bsmt254.fetchShows(today, cached, fresh) },
   { key: 'tranzac', source: 'site:tranzac', load: (today, cached, fresh) => tranzac.fetchShows(today, cached, fresh) },
+  // Both Comedy Bar clubs (Bloor and Danforth), from one set of show pages.
+  { key: 'comedybar', source: 'site:comedybar', load: (today, cached, fresh) => comedyBar.fetchShows(today, cached, fresh) },
 ];
 const ALL_KEYS = [...[...VENUES, ...SCHEMA_VENUES, ...EVENTBRITE_VENUES, ...FEED_VENUES, ...CACHED_PAGE_VENUES].map((venue) => venue.key), RCM_KEY];
 const unknown = [...only].filter((key) => !ALL_KEYS.includes(key));

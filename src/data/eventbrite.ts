@@ -6,7 +6,7 @@
  * Facts kept: title, date, time, price range, sold out or cancelled, and the Eventbrite page as
  * the ticket link. Descriptions and images are left behind.
  */
-import { classifyShow } from './categories.ts';
+import { classifyShow, type Category } from './categories.ts';
 import type { ShowEvent } from './ticketmaster.ts';
 
 const API = 'https://www.eventbriteapi.com/v3';
@@ -25,6 +25,8 @@ export interface EventbriteVenue {
   eventbriteVenueIds: string[];
   /** The venue's id in src/data/toronto_music_venues.csv. */
   venueId: string;
+  /** What shows count as when the title rules can't tell, like Comedy at a comedy club. */
+  defaultCategory?: Category;
 }
 
 export const LULA_LOUNGE: EventbriteVenue = {
@@ -32,6 +34,15 @@ export const LULA_LOUNGE: EventbriteVenue = {
   // Both records are Lula Lounge at 1585 Dundas St W, used by the same organizer.
   eventbriteVenueIds: ['30994669', '247689783'],
   venueId: 'lula-lounge',
+};
+
+/** SoCap Comedy (The Social Capital Theatre), 154 Danforth Ave. It has no website of its own. */
+export const SOCAP_COMEDY: EventbriteVenue = {
+  key: 'socap',
+  // The theatre's own record, and one a promoter made for the same room.
+  eventbriteVenueIds: ['99470539', '295416236'],
+  venueId: 'socap-comedy',
+  defaultCategory: 'Comedy',
 };
 
 interface Money {
@@ -89,7 +100,8 @@ export function toShowEvents(events: ApiEvent[], venue: EventbriteVenue): ShowEv
       const priceMax = money(event.ticket_availability?.maximum_ticket_price);
       const kind = classifyShow(name);
       // Eventbrite says when an event is music, which titles like "Salsa Saturday" don't.
-      const musical = kind.category === 'Other' && event.category_id === MUSIC_CATEGORY ? { ...kind, category: 'Music' as const } : kind;
+      const fallback = venue.defaultCategory ?? (event.category_id === MUSIC_CATEGORY ? 'Music' : null);
+      const musical = kind.category === 'Other' && fallback ? { ...kind, category: fallback } : kind;
       return [
         {
           id: event.id,

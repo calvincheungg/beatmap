@@ -12,7 +12,7 @@
  */
 import { classifyShow } from './categories.ts';
 import { decodeText, dollarAmounts, torontoDateTime, type VenueDefaults } from './feedShow.ts';
-import { createPoliteFetch, type PageFetch, type PoliteFetchOptions } from './politeFetch.ts';
+import { createPoliteFetch, HttpStatusError, type PageFetch, type PoliteFetchOptions } from './politeFetch.ts';
 import type { ShowEvent } from './ticketmaster.ts';
 
 export interface SchemaEventVenue {
@@ -51,6 +51,33 @@ export const GEARY_WAREHOUSE: SchemaEventVenue = {
   addressIncludes: '209 Geary',
   eventsOnListing: true,
   defaults: { category: 'Music' },
+};
+
+/** A WordPress comedy club whose home page carries ComedyEvent data for the next week or so, with prices. */
+export const BACKROOM_COMEDY_CLUB: SchemaEventVenue = {
+  key: 'backroom',
+  siteUrl: 'https://backroomcomedyclub.com/',
+  listingUrl: 'https://backroomcomedyclub.com/',
+  eventPath: 'product/',
+  venueId: 'backroom-comedy-club',
+  addressIncludes: '814 Bloor',
+  eventsOnListing: true,
+  defaults: { category: 'Comedy' },
+};
+
+/**
+ * The Second City's Toronto shows. Each show page's Event data holds only its next three showtimes,
+ * so that's all that's known at a time. Its addresses are blank, but every show the Toronto page
+ * links is at One York Street, so no address is required.
+ */
+export const SECOND_CITY_TORONTO: SchemaEventVenue = {
+  key: 'secondcity',
+  siteUrl: 'https://www.secondcity.com/',
+  listingUrl: 'https://www.secondcity.com/toronto',
+  eventPath: 'shows/toronto/',
+  venueId: 'the-second-city-toronto',
+  addressIncludes: '',
+  defaults: { category: 'Comedy' },
 };
 
 export const LEAH_POSLUNS_THEATRE: SchemaEventVenue = {
@@ -218,16 +245,19 @@ export function labelledPrices(html: string): string[] {
 export function toShowEvents(pages: Map<string, EventFacts[]>, venue: SchemaEventVenue): ShowEvent[] {
   const events: ShowEvent[] = [];
   for (const [url, facts] of pages) {
+    // A page with several performances (a comedy club's early and late shows) needs each one's start in its id.
+    const several = facts.length > 1;
     for (const fact of facts) {
       const start = localStart(fact.startDate);
       if (!start || !fact.address.toLowerCase().includes(venue.addressIncludes.toLowerCase())) continue;
+      const pageId = url.startsWith(venue.siteUrl) ? url.slice(venue.siteUrl.length) : url;
       const prices = [...amounts(fact.lowPrice), ...amounts(fact.highPrice)];
       const priceMin = prices.length > 0 ? Math.min(...prices) : null;
       const priceMax = prices.length > 0 ? Math.max(...prices) : null;
       const status = STATUSES[fact.eventStatus ?? ''] ?? (fact.availability === 'SoldOut' ? 'soldout' : 'onsale');
       events.push({
         // The page's address is the show's lasting identity on the site.
-        id: url.startsWith(venue.siteUrl) ? url.slice(venue.siteUrl.length) : url,
+        id: several ? `${pageId}#${start.date}T${start.time ?? ''}` : pageId,
         name: fact.name,
         date: start.date,
         time: start.time,
@@ -290,7 +320,14 @@ export async function fetchEventPages(
       reused++;
       continue;
     }
-    const html = await fetchPage(url, url.slice(venue.siteUrl.length));
+    let html: string;
+    try {
+      html = await fetchPage(url, url.slice(venue.siteUrl.length));
+    } catch (error) {
+      // A listing can link a show page that's been taken down. Missing isn't refused, so carry on.
+      if (error instanceof HttpStatusError && error.status === 404) continue;
+      throw error;
+    }
     const prices = labelledPrices(html);
     const shown = venue.preferShownTime ? shownStart(html) : null;
     // Event data without a price falls back to the price the page shows.

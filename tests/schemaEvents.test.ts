@@ -166,6 +166,26 @@ describe('fetchEventPages', () => {
     ]);
   });
 
+  it('gives each performance on a page its own id, and keeps plain ids for single shows', () => {
+    const early = eventPage({ name: 'Wednesday Pro Show', startDate: '2026-11-11T20:00:00-05:00' });
+    const late = eventPage({ name: 'Wednesday Pro Show', startDate: '2026-11-11T22:00:00-05:00' });
+    const both = toShowEvents(new Map([[url('pro-show'), [...readEventFacts(early), ...readEventFacts(late)]]]), venue);
+    expect(both.map((show) => show.id)).toEqual(['event-details/pro-show#2026-11-11T20:00:00', 'event-details/pro-show#2026-11-11T22:00:00']);
+    expect(shows({ solo: early }).map((show) => show.id)).toEqual(['event-details/solo']);
+  });
+
+  it('skips a show page that has been taken down, but stops on any other error', async () => {
+    const fetcher = (async (address: string) => {
+      if (address === venue.listingUrl) return new Response(`<a href="${url('gone')}"></a><a href="${url('here')}"></a>`);
+      return address === url('gone') ? new Response('Not found', { status: 404 }) : new Response(eventPage());
+    }) as unknown as typeof fetch;
+    const result = await fetchEventPages(venue, createFetch(venue, { fetcher, wait: async () => {} }), new Map(), () => false);
+    expect([...result.pages.keys()]).toEqual([url('here')]);
+    const refused = (async (address: string) =>
+      address === venue.listingUrl ? new Response(`<a href="${url('x')}"></a>`) : new Response('Forbidden', { status: 403 })) as unknown as typeof fetch;
+    await expect(fetchEventPages(venue, createFetch(venue, { fetcher: refused, wait: async () => {} }), new Map(), () => false)).rejects.toThrow('403');
+  });
+
   it('stops when the listing links to no events', async () => {
     const fetcher = (async () => new Response('<html>new layout</html>')) as unknown as typeof fetch;
     await expect(fetchEventPages(venue, createFetch(venue, { fetcher }), new Map(), () => false)).rejects.toThrow('no events');
