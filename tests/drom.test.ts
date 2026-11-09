@@ -25,8 +25,13 @@ describe('readShows', () => {
     expect(JSON.stringify(show)).not.toContain('Kept out');
   });
 
-  it('treats pay-what-you-can as no fixed price, and skips slots still to be announced', () => {
-    const shows = readShows(card('eucalyptus-20261107-2030', 'Eucalyptus', ['pwyc']) + card('to-be-announced-20261108-2330', 'To be announced', ['pwyc']));
+  it('treats pay-what-you-can as no fixed price, and skips slots still to be announced and closed days', () => {
+    const shows = readShows(
+      card('eucalyptus-20261107-2030', 'Eucalyptus', ['pwyc']) +
+        card('to-be-announced-20261108-2330', 'To be announced', ['pwyc']) +
+        card('live-music-to-be-announced-20261110-1900', 'Live music - To be announced') +
+        card('closed-20261109-1800', 'Closed'),
+    );
     expect(shows.map((show) => [show.name, show.priceMin, show.genre])).toEqual([['Eucalyptus', null, null]]);
   });
 });

@@ -1,7 +1,9 @@
 /**
  * Reads DROM Taberna's upcoming shows from the events list on its home page (a Webflow site).
  * Its "Load more" button works only in a browser and there's no sitemap or full events page, so
- * this sees the next ten or so shows, about three days ahead. A daily run keeps that window filled.
+ * this sees only what the home page lists: about a week ahead in November 2026, sometimes less. A
+ * daily run keeps that window filled. Placeholder slots ("Live music - To be announced") and
+ * "Closed" notices are skipped.
  *
  * Each card links to /events/<name>-<YYYYMMDD>-<HHMM> in local time, and shows the artist, a price
  * tag like "$15" or "pwyc", and a genre. Descriptions and images are never stored.
@@ -23,7 +25,7 @@ export function readShows(html: string): ShowEvent[] {
   return cards.flatMap((card): ShowEvent[] => {
     const link = /^([a-z0-9-]+?)-(\d{4})(\d{2})(\d{2})-(\d{2})(\d{2})"/.exec(card);
     const artist = decodeText(/home-events-list-artist">([^<]*)</.exec(card)?.[1] ?? '');
-    if (!link || !artist || /^to be announced$/i.test(artist)) return [];
+    if (!link || !artist || /\bto be announced\b|^(tba|closed)$/i.test(artist)) return [];
     const [, , year, month, day, hour, minute] = link;
     const tags = [...card.matchAll(/class="text-block-16">([^<]*)</g)].map((match) => decodeText(match[1]!));
     const prices = tags.flatMap(dollarAmounts);
