@@ -17,12 +17,13 @@ export interface PoliteFetchOptions {
 
 /** A site answered with an error status, like 403 when it refuses us. */
 export class HttpStatusError extends Error {
-  constructor(
-    message: string,
-    readonly status: number,
-  ) {
+  // A plain field, not a constructor parameter property: Node runs the scripts by stripping types and can't run those.
+  readonly status: number;
+
+  constructor(message: string, status: number) {
     super(message);
     this.name = 'HttpStatusError';
+    this.status = status;
   }
 }
 

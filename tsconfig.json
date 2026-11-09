@@ -12,6 +12,7 @@
     "noFallthroughCasesInSwitch": true,
     "noUncheckedIndexedAccess": true,
     "isolatedModules": true,
+    "erasableSyntaxOnly": true,
     "resolveJsonModule": true,
     "allowJs": true,
     "skipLibCheck": true,
