@@ -117,7 +117,7 @@ function apiDate(date: Date): string {
   return `${date.toISOString().slice(0, 19)}Z`;
 }
 
-/** Fetches upcoming music events near a point, one time window at a time. */
+/** Fetches upcoming music and comedy events near a point, one time window at a time. */
 export async function fetchMusicEvents(options: FetchOptions): Promise<ApiEvent[]> {
   const fetcher = options.fetcher ?? fetch;
   const wait = options.wait ?? ((ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms)));
@@ -132,7 +132,8 @@ export async function fetchMusicEvents(options: FetchOptions): Promise<ApiEvent[
     for (let page = 0; (page + 1) * PAGE_SIZE <= MAX_ITEMS; page++) {
       const params = new URLSearchParams({
         apikey: options.apiKey,
-        classificationName: 'music',
+        // Any event classed as either. Comedy is a genre of Ticketmaster's Arts & Theatre segment.
+        classificationName: 'music,comedy',
         countryCode: 'CA',
         geoPoint,
         radius: String(options.radiusKm),
@@ -226,7 +227,7 @@ export interface ShowEvent {
   /** Null when Ticketmaster gives only a placeholder like "Other". */
   genre: string | null;
   subGenre: string | null;
-  /** Music, Dance, Theatre and so on. Every Ticketmaster show is Music. See categories.ts. */
+  /** Music, Dance, Theatre and so on. Ticketmaster shows are Music or Comedy. See categories.ts. */
   category: string;
   /** Everyone on the bill, including support acts the title often leaves out. */
   artists: string[];
@@ -298,9 +299,20 @@ export function cleanGenre(name: string | undefined): string | null {
   return GENRE_ALIASES[trimmed] ?? trimmed;
 }
 
-function primaryGenres(event: ApiEvent): { genre: string | null; subGenre: string | null } {
+function primaryClassification(event: ApiEvent): ApiClassification | undefined {
   const classifications = event.classifications ?? [];
-  const primary = classifications.find((item) => item.primary) ?? classifications[0];
+  return classifications.find((item) => item.primary) ?? classifications[0];
+}
+
+/** Comedy when Ticketmaster classes the event as comedy, and Music otherwise, since only those two are fetched. */
+export function categoryOf(event: ApiEvent): 'Music' | 'Comedy' {
+  return /^comedy$/i.test(primaryClassification(event)?.genre?.name?.trim() ?? '') ? 'Comedy' : 'Music';
+}
+
+function primaryGenres(event: ApiEvent): { genre: string | null; subGenre: string | null } {
+  // A comedy show's "genre" is Comedy itself, which is its category, not a music genre.
+  if (categoryOf(event) === 'Comedy') return { genre: null, subGenre: null };
+  const primary = primaryClassification(event);
   const genre = cleanGenre(primary?.genre?.name);
   const subGenre = cleanGenre(primary?.subGenre?.name);
   // Sub-genres often just repeat the genre.
@@ -354,7 +366,7 @@ export function toShowEvents<T extends MatchableVenue>(apiEvents: ApiEvent[], ve
       url: event.url,
       venueId: venue.id,
       ...primaryGenres(event),
-      category: 'Music',
+      category: categoryOf(event),
       ...readPrice(event),
       ageLabel: readAge(event),
       imageUrl: pickImage(event.images),

@@ -170,6 +170,20 @@ describe('toShowEvents', () => {
     expect(genres).toEqual({ primary: ['Pop', 'K-Pop'], vague: [null, null], repeat: ['Jazz', null], none: [null, null], amapiano: ['Dance/Electronic', null], urban: ['Hip-Hop/Rap', null] });
   });
 
+  it('files comedy as Comedy without a music genre, and everything else as Music', () => {
+    const report = toShowEvents(
+      [
+        event('standup', { classifications: [{ primary: true, genre: { name: 'Comedy' }, subGenre: { name: 'Comedy' } }] }),
+        event('band', { classifications: [{ primary: true, genre: { name: 'Rock' } }] }),
+      ],
+      venues,
+    );
+    expect(report.events.map((show) => [show.id, show.category, show.genre, show.subGenre])).toEqual([
+      ['standup', 'Comedy', null, null],
+      ['band', 'Music', 'Rock', null],
+    ]);
+  });
+
   it('allows shows with no artists listed', () => {
     const show = event('solo', { _embedded: { venues: [{ name: 'Horseshoe Tavern', location: at(43.649, -79.3959) }] } });
     expect(toShowEvents([show], venues).events[0]?.artists).toEqual([]);
@@ -270,7 +284,7 @@ describe('fetchMusicEvents', () => {
   };
   const reply = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status });
 
-  it('requests music near the point, follows pages and removes duplicates', async () => {
+  it('requests music and comedy near the point, follows pages and removes duplicates', async () => {
     const urls: URL[] = [];
     const fetcher = (async (input: string) => {
       const url = new URL(input);
@@ -288,7 +302,7 @@ describe('fetchMusicEvents', () => {
     // Two pages for the first month, then one for each of the other 12 months.
     expect(urls).toHaveLength(14);
     const first = urls[0]!.searchParams;
-    expect(first.get('classificationName')).toBe('music');
+    expect(first.get('classificationName')).toBe('music,comedy');
     expect(first.get('geoPoint')).toBe(encodeGeohash(43.735, -79.435));
     expect(first.get('unit')).toBe('km');
     expect(urls[1]!.searchParams.get('page')).toBe('1');

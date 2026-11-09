@@ -1,4 +1,4 @@
-// Fetches upcoming music events from Ticketmaster for the venues in our CSV, saves them to
+// Fetches upcoming music and comedy events from Ticketmaster for the venues in our CSV, saves them to
 // Supabase, and reports coverage. Needs TICKETMASTER_API_KEY, SUPABASE_URL and SUPABASE_SERVICE_KEY.
 // Run: npm run data:events
 import { readFileSync } from 'node:fs';
@@ -37,7 +37,7 @@ const { saved, pruned } = await syncEvents(events, runStart, { url, serviceKey }
 if (!pruned) console.warn('Far fewer events than usual, so unlisted events were kept. Check this run.');
 
 const byCount = <K>(counts: Map<K, number>) => [...counts].sort((a, b) => b[1] - a[1]);
-console.log(`Fetched ${apiEvents.length} music events. Saved ${saved} at our venues to Supabase.`);
+console.log(`Fetched ${apiEvents.length} music and comedy events. Saved ${saved} at our venues to Supabase.`);
 console.log(`\nCovered: ${matchedCounts.size} of ${venues.length} venues`);
 for (const [id, count] of byCount(matchedCounts)) {
   console.log(`  ${String(count).padStart(4)}  ${id}  (as: ${[...(matchedNames.get(id) ?? [])].join(' | ')})`);

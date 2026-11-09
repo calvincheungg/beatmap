@@ -1,6 +1,6 @@
 /**
  * Sorts shows into broad categories from their titles, for sources that don't give a genre.
- * Ticketmaster shows are all Music, since only its music listings are fetched.
+ * Ticketmaster shows are Music or Comedy, from its own classification (see categoryOf in ticketmaster.ts).
  * Edit the rules here: the first rule whose pattern matches wins.
  */
 
