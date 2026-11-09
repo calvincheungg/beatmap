@@ -53,6 +53,11 @@ describe('Squarespace events (The Painted Lady)', () => {
     ]);
   });
 
+  it('drops the "(Copy)" Squarespace adds to duplicated events', () => {
+    const [show] = sq.readShows(page(article('wax-candy', 'Wax Candy Disco Dance Party! (Copy)', '20261128T030000Z/20261128T070000Z')), sq.THE_PISTON, '2026-11-09');
+    expect(show).toMatchObject({ name: 'Wax Candy Disco Dance Party!', date: '2026-11-27', time: '22:00:00', category: 'Music', url: 'https://www.thepiston.ca/shows-1/wax-candy' });
+  });
+
   it('reads only the events page, and stops if its list is gone', async () => {
     expect(sq.isAllowedUrl(venue, 'https://www.thepaintedlady.ca/shows-1')).toBe(true);
     expect(sq.isAllowedUrl(venue, 'https://www.thepaintedlady.ca/shows-1?format=json')).toBe(false);

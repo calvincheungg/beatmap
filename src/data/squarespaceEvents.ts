@@ -32,6 +32,14 @@ export const THE_PAINTED_LADY: SquarespaceVenue = {
   defaults: { category: 'Music' },
 };
 
+export const THE_PISTON: SquarespaceVenue = {
+  key: 'piston',
+  siteUrl: 'https://www.thepiston.ca/',
+  eventsPath: 'calendar',
+  venueId: 'the-piston',
+  defaults: { category: 'Music' },
+};
+
 export function eventsUrl(venue: SquarespaceVenue): string {
   return `${venue.siteUrl}${venue.eventsPath}`;
 }
@@ -68,7 +76,8 @@ export function readShows(html: string, venue: SquarespaceVenue, today: string):
       const link = /<a href="(\/[^"]+)" class="eventlist-title-link">([\s\S]*?)<\/a>/.exec(article);
       const start = readStart(article);
       if (!link || !start || start.date < today) return [];
-      const name = decodeText(link[2]!.replace(/<[^>]+>/g, ' '));
+      // Squarespace marks a duplicated event "(Copy)", and some venues forget to remove it.
+      const name = decodeText(link[2]!.replace(/<[^>]+>/g, ' ')).replace(/\s*\(copy\)\s*$/i, '');
       if (!name || /^closed\b/i.test(name)) return [];
       const slot = `${name.toLowerCase()}|${start.date}|${start.time}`;
       if (seen.has(slot)) return [];

@@ -252,6 +252,8 @@ describe('classifyShow', () => {
   it('sorts shows into categories, with a genre when the title is clear', () => {
     const cases: [string, string, string | null][] = [
       ['The Nutcracker by Victoria Ballet Company', 'Dance', null],
+      ['Fast Times 80s Dance Party!', 'Music', null],
+      ['Dance Division 018 | NOV 27 | Guaranteed dancing', 'Music', null],
       ['Alice in Wonderland. A Christmas Musical', 'Theatre', null],
       ['The Reel Thing Film Series', 'Film', null],
       ['RHPO A Holiday Dream', 'Music', 'Classical'],

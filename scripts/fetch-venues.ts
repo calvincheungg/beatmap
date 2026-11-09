@@ -93,6 +93,7 @@ const FEED_VENUES: { key: string; source: string; load: (today: string) => Promi
     source: 'squarespace:paintedlady',
     load: (today) => squarespace.fetchShows(squarespace.THE_PAINTED_LADY, today),
   },
+  { key: squarespace.THE_PISTON.key, source: 'squarespace:piston', load: (today) => squarespace.fetchShows(squarespace.THE_PISTON, today) },
 ];
 /** BSMT 254: its listing, then each show's page, cached for a few days. */
 const BSMT254_KEY = 'bsmt254';

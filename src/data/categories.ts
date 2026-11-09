@@ -26,6 +26,8 @@ const RULES: Rule[] = [
   // First, so a music bar's trivia night isn't counted as a concert.
   { pattern: /\b(trivia|quiz|bingo|game night|board games?)\b/i, category: 'Games' },
   { pattern: /\b(film|movie|screening|cinema|reel thing)\b/i, category: 'Film' },
+  // A club's "80s Dance Party" or "guaranteed dancing" is a DJ night, so it's Music, not a dance performance.
+  { pattern: /\b(dance[\s-]+(party|parties|night|nights|floor)|dancing)\b/i, category: 'Music' },
   { pattern: /\b(ballet|nutcracker|dance|dancers|flamenco)\b/i, category: 'Dance' },
   { pattern: /\b(comedy|comedian|stand[- ]?up|improv|laughs?)\b/i, category: 'Comedy' },
   // Opera counts as Theatre. Composers' names mark the operas that don't say so.

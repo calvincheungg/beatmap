@@ -62,7 +62,7 @@ npm run db:push                  # apply new migrations to the linked project
 | `src/data/mrBlack.ts` | Clubs selling on Mr Black, from its public list of upcoming nights (Future). Standing weekly guest-list nights are left out |
 | `src/data/rhythm.ts` | Rhythm's Shopify events page: date and title only, ticket links passed on to RA but never requested |
 | `src/data/bsmt254.ts` | BSMT 254's listing, then each show's page for the real time, prices and style (cached 3 days) |
-| `src/data/squarespaceEvents.ts` | Squarespace events collections, from the collection's own page, since `?format=json` and `/api/` are disallowed (The Painted Lady) |
+| `src/data/squarespaceEvents.ts` | Squarespace events collections, from the collection's own page, since `?format=json` and `/api/` are disallowed (The Painted Lady, The Piston) |
 | `src/data/feedShow.ts` | Shared helpers for feed adapters: building shows, prices and ages from text |
 | `src/data/pageCache.ts` | Caches facts from venues' show pages in Supabase for 3 days. Script only |
 | `src/data/categories.ts` | Keyword rules sorting non-Ticketmaster shows into Music, Dance, Theatre and so on |
