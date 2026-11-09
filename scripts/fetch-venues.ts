@@ -23,6 +23,7 @@ import * as artsPeople from '../src/data/artsPeople.ts';
 import * as elfsight from '../src/data/elfsightCalendar.ts';
 import * as boomtech from '../src/data/boomtech.ts';
 import * as bsmt254 from '../src/data/bsmt254.ts';
+import * as coc from '../src/data/coc.ts';
 import * as drom from '../src/data/drom.ts';
 import * as mrBlack from '../src/data/mrBlack.ts';
 import * as rhythm from '../src/data/rhythm.ts';
@@ -35,6 +36,7 @@ import * as reservoir from '../src/data/reservoir.ts';
 import * as shopify from '../src/data/shopifyShows.ts';
 import * as showpass from '../src/data/showpass.ts';
 import * as squarespace from '../src/data/squarespaceEvents.ts';
+import * as tranzac from '../src/data/tranzac.ts';
 import * as schema from '../src/data/schemaEvents.ts';
 
 /** Venues on AudienceView. Add another by giving it a config like RICHMOND_HILL_CENTRE. */
@@ -94,10 +96,25 @@ const FEED_VENUES: { key: string; source: string; load: (today: string) => Promi
     load: (today) => squarespace.fetchShows(squarespace.THE_PAINTED_LADY, today),
   },
   { key: squarespace.THE_PISTON.key, source: 'squarespace:piston', load: (today) => squarespace.fetchShows(squarespace.THE_PISTON, today) },
+  { key: 'coc', source: 'coc:fourseasons', load: (today) => coc.fetchShows(today) },
 ];
-/** BSMT 254: its listing, then each show's page, cached for a few days. */
-const BSMT254_KEY = 'bsmt254';
-const ALL_KEYS = [...[...VENUES, ...SCHEMA_VENUES, ...EVENTBRITE_VENUES, ...FEED_VENUES].map((venue) => venue.key), RCM_KEY, BSMT254_KEY];
+/** What a venue read through cached show pages returns. `fetched` holds this run's pages; null means a page with no show. */
+interface CachedPagesResult {
+  events: ShowEvent[];
+  fetched: Map<string, object | null>;
+  reused: number;
+  deferred?: number;
+}
+/** Venues read from a listing, then each show's own page, with the pages' facts cached for a few days. */
+const CACHED_PAGE_VENUES: {
+  key: string;
+  source: string;
+  load: (today: string, cached: Awaited<ReturnType<typeof readPageCache>>, fresh: (fetchedAt: string) => boolean) => Promise<CachedPagesResult>;
+}[] = [
+  { key: 'bsmt254', source: 'site:bsmt254', load: (today, cached, fresh) => bsmt254.fetchShows(today, cached, fresh) },
+  { key: 'tranzac', source: 'site:tranzac', load: (today, cached, fresh) => tranzac.fetchShows(today, cached, fresh) },
+];
+const ALL_KEYS = [...[...VENUES, ...SCHEMA_VENUES, ...EVENTBRITE_VENUES, ...FEED_VENUES, ...CACHED_PAGE_VENUES].map((venue) => venue.key), RCM_KEY];
 const unknown = [...only].filter((key) => !ALL_KEYS.includes(key));
 if (unknown.length > 0) {
   console.error(`Unknown venue ${unknown.join(', ')}. Choose from: ${ALL_KEYS.join(', ')}.`);
@@ -181,19 +198,22 @@ if (only.size === 0 || only.has(RCM_KEY)) {
   }
 }
 
-if (only.size === 0 || only.has(BSMT254_KEY)) {
+for (const venue of chosen(CACHED_PAGE_VENUES)) {
   const runStart = new Date();
-  const store = { url, serviceKey, source: 'site:bsmt254' };
+  const store = { url, serviceKey, source: venue.source };
   try {
-    const result = await bsmt254.fetchShows(torontoDate(runStart), await readPageCache(store), (fetchedAt) => isFresh(fetchedAt, runStart));
+    const result = await venue.load(torontoDate(runStart), await readPageCache(store), (fetchedAt) => isFresh(fetchedAt, runStart));
+    if (result.events.length === 0) throw new Error('Found no upcoming shows, so nothing was saved.');
     const { saved, pruned } = await syncEvents(result.events, runStart, store);
-    const pages = new Map([...result.fetched].map(([page, facts]) => [page, [facts as unknown as SearchRow]]));
+    // A page with no show is cached too, with no facts, so it isn't fetched again every run.
+    const pages = new Map([...result.fetched].map(([page, facts]) => [page, facts ? [facts as unknown as SearchRow] : []]));
     await writePageCache(store, pages, runStart);
-    if (!pruned) console.warn(`${BSMT254_KEY}: far fewer shows than usual, so unlisted ones were kept. Check this run.`);
-    console.log(`${BSMT254_KEY}: fetched ${result.fetched.size} show pages, reused ${result.reused}, saved ${saved} shows.`);
+    if (!pruned) console.warn(`${venue.key}: far fewer shows than usual, so unlisted ones were kept. Check this run.`);
+    const later = result.deferred ? `, left ${result.deferred} for the next run` : '';
+    console.log(`${venue.key}: fetched ${result.fetched.size} show pages, reused ${result.reused}${later}, saved ${saved} shows.`);
   } catch (error) {
     failed = true;
-    console.error(`${BSMT254_KEY}: ${error instanceof Error ? error.message : String(error)}`);
+    console.error(`${venue.key}: ${error instanceof Error ? error.message : String(error)}`);
   }
 }
 

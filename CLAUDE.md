@@ -63,6 +63,8 @@ npm run db:push                  # apply new migrations to the linked project
 | `src/data/rhythm.ts` | Rhythm's Shopify events page: date and title only, ticket links passed on to RA but never requested |
 | `src/data/bsmt254.ts` | BSMT 254's listing, then each show's page for the real time, prices and style (cached 3 days) |
 | `src/data/squarespaceEvents.ts` | Squarespace events collections, from the collection's own page, since `?format=json` and `/api/` are disallowed (The Painted Lady, The Piston) |
+| `src/data/tranzac.ts` | The Tranzac: sitemap, then each event page's Nuxt payload for the exact start (cached 3 days, up to 120 pages a run) |
+| `src/data/coc.ts` | Canadian Opera Company performances at the Four Seasons Centre, from the feed its calendar page loads |
 | `src/data/feedShow.ts` | Shared helpers for feed adapters: building shows, prices and ages from text |
 | `src/data/pageCache.ts` | Caches facts from venues' show pages in Supabase for 3 days. Script only |
 | `src/data/categories.ts` | Keyword rules sorting non-Ticketmaster shows into Music, Dance, Theatre and so on |
